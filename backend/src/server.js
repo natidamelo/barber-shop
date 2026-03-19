@@ -80,7 +80,7 @@ const corsOptions = {
       ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
       : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
