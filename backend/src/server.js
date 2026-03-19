@@ -161,11 +161,18 @@ app.get('/api', (req, res) => {
 app.use(notFound);
 app.use(errorHandler);
 
+const initializeSettings = require('./scripts/initSettings');
+const initializeUser = require('./scripts/initUser');
+
 // Start server
 const startServer = async () => {
   try {
     // Connect to database
     await connectDB();
+    
+    // Initialize default data (settings, superadmin if none exist)
+    await initializeSettings();
+    await initializeUser();
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const connectDB = require('../config/database');
-const { User, Service, Inventory } = require('../models');
+const { User, Service, Inventory, Settings } = require('../models');
 
 const seedUsers = async () => {
   console.log('🌱 Seeding users...');
@@ -99,6 +99,34 @@ const seedUsers = async () => {
   }
   console.log(`✅ Created ${createdUsers.length} users`);
   return createdUsers;
+};
+
+const seedSettings = async () => {
+  console.log('🌱 Seeding settings...');
+  
+  // Upsert basic settings
+  const settings = [
+    {
+      key: 'business_name',
+      value: 'BarberPro',
+      description: 'Business/Shop name displayed throughout the application'
+    },
+    {
+      key: 'currency',
+      value: 'USD',
+      description: 'Business currency symbol'
+    }
+  ];
+
+  for (const s of settings) {
+    await Settings.findOneAndUpdate(
+      { key: s.key },
+      s,
+      { upsert: true, new: true }
+    );
+  }
+  
+  console.log('✅ Default settings initialized');
 };
 
 const seedServices = async () => {
@@ -308,6 +336,7 @@ const runSeed = async () => {
     await connectDB();
     
     // Run seeds
+    await seedSettings();
     await seedUsers();
     await seedServices();
     await seedInventory();

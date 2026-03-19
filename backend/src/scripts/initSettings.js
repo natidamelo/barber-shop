@@ -6,31 +6,29 @@ const initializeSettings = async () => {
   try {
     console.log('🔧 Initializing default settings...');
     
-    // Initialize business name if it doesn't exist
-    const businessName = await Settings.findOne({ key: 'business_name' });
-    if (!businessName) {
-      await Settings.create({
-        key: 'business_name',
-        value: 'BarberPro',
-        description: 'Business/Shop name displayed throughout the application'
-      });
-      console.log('✅ Default business name "BarberPro" initialized');
-    } else {
-      console.log('ℹ️  Business name setting already exists');
-    }
+    // Use upsert to ensure the business name exists
+    const result = await Settings.findOneAndUpdate(
+      { key: 'business_name' },
+      { 
+        $setOnInsert: { 
+          value: 'BarberPro',
+          description: 'Business/Shop name displayed throughout the application'
+        } 
+      },
+      { upsert: true, new: true }
+    );
     
+    console.log(`✅ Business name matches: "${result.value}"`);
     console.log('✅ Settings initialization complete');
-    process.exit(0);
   } catch (error) {
-    console.error('❌ Error initializing settings:', error);
-    process.exit(1);
+    console.error('❌ Error initializing settings:', error.message);
   }
 };
 
 // Run if called directly
 if (require.main === module) {
   connectDB().then(() => {
-    initializeSettings();
+    initializeSettings().then(() => process.exit(0));
   });
 }
 
