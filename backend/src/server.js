@@ -64,7 +64,19 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In development, allow localhost and private network IPs for testing on real devices
+    // Check against allowed origins from environment variable
+    const allowedOrigins = (process.env.CORS_ORIGINS 
+      ? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
+      : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175']);
+    
+    // Normalize current origin
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    
+    // In development, allow localhost and private network IPs
     if (process.env.NODE_ENV === 'development') {
       if (
         origin.startsWith('http://localhost:') ||
@@ -75,21 +87,16 @@ const corsOptions = {
       }
     }
     
-    // Check against allowed origins from environment variable
-    const allowedOrigins = process.env.CORS_ORIGINS 
-      ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-      : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
-    
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // If we're here, it's not explicitly allowed.
+    // However, if we're in production and no origins are set, it might be safer to allow all for now 
+    // OR we can just be strict. Let's be strict but log it (though we can't see logs easily, 
+    // the error will be passed to next).
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 };
 app.use(cors(corsOptions));
 

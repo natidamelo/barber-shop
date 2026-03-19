@@ -66,10 +66,13 @@ router.post('/register', [
       password,
       phone,
       role: ['admin', 'barber', 'customer', 'receptionist'].includes(role) ? role : 'customer', // superadmin only via seed/direct DB
-      status: 'active'
+      status: 'inactive' // Must be activated by an admin
     });
 
-    sendTokenResponse(user, 201, res);
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is currently pending activation. Please wait for an administrator to approve it.'
+    });
   } catch (error) {
     next(error);
   }
@@ -110,10 +113,25 @@ router.post('/login', [
     }
 
     // Check if user is active
-    if (user.status !== 'active') {
+    if (user.status === 'inactive') {
+      return res.status(401).json({
+        success: false,
+        error: 'Your account is pending activation. Please wait for an administrator to approve it.'
+      });
+    }
+
+    if (user.status === 'suspended') {
       return res.status(401).json({
         success: false,
         error: 'Your account has been suspended. Please contact support.'
+      });
+    }
+
+    // Generic status check just in case
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        error: 'Your account is not active. Please contact support.'
       });
     }
 
@@ -135,36 +153,25 @@ router.post('/login', [
     let licenseInfo = null;
 
     if (user.role !== 'superadmin') {
-      const { computer_id } = req.body;
-      let licenseKey;
+      const { computer_id, license_key: providedLicenseKey } = req.body;
+      let licenseKey = providedLicenseKey;
 
-      if (user.role === 'admin') {
-        // Admin provides their own license key
-        licenseKey = req.body.license_key;
+      if (!computer_id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Computer ID is required.',
+          require_license: true
+        });
+      }
 
-        if (!licenseKey || !computer_id) {
-          return res.status(403).json({
-            success: false,
-            error: 'License key and computer ID are required to log in.',
-            require_license: true
-          });
-        }
-      } else {
-        // Staff (barber, receptionist, customer, washer):
-        // Find their shop admin and use the admin's stored license key
-        if (!computer_id) {
-          return res.status(403).json({
-            success: false,
-            error: 'Computer ID is required.',
-            require_license: true
-          });
-        }
-
+      // If no license key provided in request, try to find it from the shop's admin
+      if (!licenseKey && user.role !== 'admin') {
         // Look up the admin this user belongs to
         let adminUser = null;
         if (user.admin_id) {
           adminUser = await User.findById(user.admin_id).select('license_key role status');
         }
+        
         // Fallback: find any active admin in the system (single-shop setup)
         if (!adminUser) {
           adminUser = await User.findOne({ role: 'admin', status: 'active' }).select('license_key role');
@@ -173,12 +180,21 @@ router.post('/login', [
         if (!adminUser || !adminUser.license_key) {
           return res.status(403).json({
             success: false,
-            error: 'Your shop does not have an active license. Please contact your administrator.',
+            error: 'This account is not linked to an active shop license. Please provide a license key or contact your administrator.',
             require_license: true
           });
         }
 
         licenseKey = adminUser.license_key;
+      }
+
+      // If still no license key (e.g. admin didn't provide one)
+      if (!licenseKey) {
+        return res.status(403).json({
+          success: false,
+          error: 'A license key is required to log in.',
+          require_license: true
+        });
       }
 
       // Validate the license

@@ -41,7 +41,7 @@ const userSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
+    default: 'inactive'
   },
   must_change_password: {
     type: Boolean,

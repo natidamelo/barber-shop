@@ -2,8 +2,21 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error
-  console.error('Error:', err);
+  // Log error with more details
+  console.error('❌ Error details:', {
+    message: err.message,
+    stack: err.stack,
+    name: err.name,
+    code: err.code,
+    path: req.path,
+    origin: req.get('origin')
+  });
+
+  // CORS error
+  if (err.message && err.message.includes('not allowed by CORS')) {
+    const message = err.message;
+    error = { message, statusCode: 403 };
+  }
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -41,18 +54,10 @@ const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 500 };
   }
 
-  // MySQL specific errors
-  if (err.code === 'ER_DUP_ENTRY') {
-    const message = 'Duplicate entry - record already exists';
-    error = { message, statusCode: 400 };
-  }
+  // Generic status code
+  const statusCode = error.statusCode || err.statusCode || 500;
 
-  if (err.code === 'ER_NO_SUCH_TABLE') {
-    const message = 'Database table not found - please run migrations';
-    error = { message, statusCode: 500 };
-  }
-
-  res.status(error.statusCode || 500).json({
+  res.status(statusCode).json({
     success: false,
     error: error.message || 'Server Error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
