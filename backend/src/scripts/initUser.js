@@ -6,9 +6,9 @@ const initializeUser = async () => {
   try {
     console.log('🌱 Initializing default users...');
     
-    // Check if any users exist
-    const count = await User.countDocuments();
-    if (count === 0) {
+    // Check if superadmin exists
+    const superadmin = await User.findOne({ email: 'admin@barbershop.com' });
+    if (!superadmin) {
       await User.create({
         first_name: 'Admin',
         last_name: 'User',
@@ -21,7 +21,7 @@ const initializeUser = async () => {
       });
       console.log('✅ Default superadmin "admin@barbershop.com" created');
     } else {
-      console.log('ℹ️  Users already exist, skipping initialization');
+      console.log('ℹ️  Superadmin "admin@barbershop.com" already exists');
     }
     
     console.log('✅ User initialization complete');
