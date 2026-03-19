@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: barber-shop-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PORT
+        value: 5000
