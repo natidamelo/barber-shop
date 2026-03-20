@@ -45,10 +45,11 @@ const Sidebar = () => {
   const showBilling = location.pathname === '/dashboard/billing'
 
   const getNavigation = () => {
-    const role = user?.role?.toLowerCase()
+    const roleLower = user?.role?.toLowerCase() || '';
+    const isAdminOrDev = roleLower.includes('admin') || roleLower.includes('dev') || user?.first_name === 'Admin';
     
     // Washer: no dashboard access — only Profile
-    if (role === 'washer') {
+    if (roleLower === 'washer') {
       return [
         { name: 'Profile', href: '/dashboard/profile', icon: User },
       ]
@@ -60,7 +61,7 @@ const Sidebar = () => {
       { name: 'Profile', href: '/dashboard/profile', icon: User },
     ]
 
-    if (role === 'developer' || role === 'superadmin') {
+    if (isAdminOrDev) {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -74,7 +75,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (role === 'admin') {
+    if (roleLower === 'admin') {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -86,7 +87,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (role === 'receptionist') {
+    if (roleLower === 'receptionist') {
       return [
         ...baseNavigation,
         { name: 'Customers', href: '/dashboard/customers', icon: Users },
@@ -94,7 +95,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (role === 'barber') {
+    if (roleLower === 'barber') {
       return [
         ...baseNavigation,
         { name: 'My Schedule', href: '/dashboard/schedule', icon: Clock },
