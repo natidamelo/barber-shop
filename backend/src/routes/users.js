@@ -66,8 +66,8 @@ router.post('/upload-profile-image', protect, authorize('admin', 'receptionist')
 
 // @desc    Get all users
 // @route   GET /api/users
-// @access  Private (Admin, Receptionist)
-router.get('/', protect, authorize('admin', 'receptionist'), [
+// @access  Private (Admin, Receptionist, Developer)
+router.get('/', protect, authorize('admin', 'receptionist', 'developer'), [
   query('role').optional().isIn(['admin', 'barber', 'customer', 'receptionist', 'washer']).withMessage('Invalid role'),
   query('status').optional().isIn(['active', 'inactive', 'suspended']).withMessage('Invalid status'),
   query('search').optional().isString().withMessage('Search must be a string')
@@ -188,8 +188,8 @@ router.get('/barbers', [
 
 // @desc    Create new user (Admin/Receptionist only)
 // @route   POST /api/users
-// @access  Private (Admin, Receptionist)
-router.post('/', protect, authorize('admin', 'receptionist'), [
+// @access  Private (Admin, Receptionist, Developer)
+router.post('/', protect, authorize('admin', 'receptionist', 'developer'), [
   body('first_name')
     .trim()
     .isLength({ min: 2, max: 100 })
@@ -585,8 +585,8 @@ router.put('/:id', protect, [
 
 // @desc    Reset user password (admin/receptionist)
 // @route   POST /api/users/:id/reset-password
-// @access  Private (Admin, Receptionist)
-router.post('/:id/reset-password', protect, authorize('admin', 'receptionist'), [
+// @access  Private (Admin, Receptionist, Developer)
+router.post('/:id/reset-password', protect, authorize('admin', 'receptionist', 'developer'), [
   param('id').isMongoId().withMessage('User ID must be a valid MongoDB ID')
 ], async (req, res, next) => {
   try {
@@ -656,8 +656,8 @@ router.post('/:id/reset-password', protect, authorize('admin', 'receptionist'), 
 
 // @desc    Delete user
 // @route   DELETE /api/users/:id
-// @access  Private (Admin)
-router.delete('/:id', protect, authorize('admin'), [
+// @access  Private (Admin, Developer)
+router.delete('/:id', protect, authorize('admin', 'developer'), [
   param('id').isMongoId().withMessage('User ID must be a valid MongoDB ID')
 ], async (req, res, next) => {
   try {
