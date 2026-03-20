@@ -6,7 +6,7 @@ import { userService } from '../../services/userService'
 
 const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
   const currentUser = authService.getStoredUser()
-  const isSuperAdmin = currentUser?.role === 'superadmin'
+  const isSuperAdmin = currentUser?.role === 'superadmin' || currentUser?.role === 'developer'
   const isPrivileged = currentUser?.role === 'admin' || isSuperAdmin
   const canCreateBarber = isPrivileged
   const canCreateReceptionist = isPrivileged

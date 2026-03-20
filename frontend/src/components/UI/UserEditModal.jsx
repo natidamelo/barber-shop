@@ -9,6 +9,7 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
     last_name: '',
     phone: '',
     bio: '',
+    role: 'customer',
     status: 'active',
     commission_percentage: '',
     profile_image: ''
@@ -25,6 +26,7 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
         last_name: user.last_name || '',
         phone: user.phone || '',
         bio: user.bio || '',
+        role: user.role || 'customer',
         status: user.status || 'active',
         commission_percentage: user.commission_percentage !== null && user.commission_percentage !== undefined ? user.commission_percentage : '',
         profile_image: user.profile_image || ''
@@ -85,6 +87,7 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
       const updateData = {
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
+        role: formData.role,
         status: formData.status
       }
       // Optional fields: send value or null so backend can clear them
@@ -233,6 +236,24 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="input"
+              >
+                <option value="customer">Customer</option>
+                <option value="barber">Barber</option>
+                <option value="receptionist">Receptionist</option>
+                <option value="washer">Washer</option>
+                <option value="admin">Admin (Shop Owner)</option>
               </select>
             </div>
 
