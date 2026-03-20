@@ -488,7 +488,7 @@ router.put('/:id', protect, [
     .withMessage('Bio cannot exceed 1000 characters'),
   body('role')
     .optional()
-    .isIn(['admin', 'barber', 'customer', 'receptionist', 'washer'])
+    .isIn(['admin', 'barber', 'customer', 'receptionist', 'washer', 'developer'])
     .withMessage('Invalid role'),
   body('status')
     .optional()

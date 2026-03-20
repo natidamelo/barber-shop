@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Save, Loader, Upload } from 'lucide-react'
 import { userService } from '../../services/userService'
+import { authService } from '../../services/authService'
 import toast from 'react-hot-toast'
 
 const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
@@ -18,6 +19,8 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
+  const currentUser = authService.getStoredUser()
+  const isDeveloper = currentUser?.role === 'developer'
 
   // Update form data when user prop changes
   useEffect(() => {
@@ -259,6 +262,7 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
                 <option value="receptionist">Receptionist</option>
                 <option value="washer">Washer</option>
                 <option value="admin">Admin (Shop Owner)</option>
+                {isDeveloper && <option value="developer">Developer</option>}
               </select>
             </div>
 
