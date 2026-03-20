@@ -23,9 +23,9 @@ const initializeUser = async () => {
       console.log(`✅ Migrated ${migrationResult.modifiedCount} account(s) to developer role`);
     }
 
-    // Force ALL accounts to active status (as requested for global activation management)
-    await User.updateMany({}, { status: 'active' });
-    console.log('✅ All existing accounts have been activated');
+    // Force Developer accounts to active status
+    await User.updateMany({ role: 'developer' }, { status: 'active' });
+    console.log('✅ Developer accounts have been verified as active');
 
     // Check if default developer exists
     const developer = await User.findOne({ role: 'developer' });
