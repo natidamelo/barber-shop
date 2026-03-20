@@ -84,7 +84,7 @@ router.get('/', protect, authorize('admin', 'receptionist', 'developer'), [
 
     const { role, status, search, page = 1, limit = 10 } = req.query;
     
-    let query = {};
+    
 
     // ── Base Isolation Filters ──────────────────────────────────────────────
     const andFilters = [];
