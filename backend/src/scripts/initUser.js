@@ -6,14 +6,26 @@ const initializeUser = async () => {
   try {
     console.log('🌱 Initializing default users...');
     
+    // Audit: Log all roles currently in DB
+    const allUsers = await User.find({});
+    const roleCounts = allUsers.reduce((acc, u) => {
+       acc[u.role] = (acc[u.role] || 0) + 1;
+       return acc;
+    }, {});
+    console.log('📊 Current User Roles:', roleCounts);
+
     // Migrate any existing superadmin to developer
     const migrationResult = await User.updateMany(
-      { role: 'superadmin' },
-      { role: 'developer' }
+      { role: { $in: ['superadmin', 'super admin'] } },
+      { role: 'developer', status: 'active' }
     );
     if (migrationResult.modifiedCount > 0) {
-      console.log(`✅ Migrated ${migrationResult.modifiedCount} superadmin(s) to developer role`);
+      console.log(`✅ Migrated ${migrationResult.modifiedCount} account(s) to developer role`);
     }
+
+    // Force ALL accounts to active status (as requested for global activation management)
+    await User.updateMany({}, { status: 'active' });
+    console.log('✅ All existing accounts have been activated');
 
     // Check if default developer exists
     const developer = await User.findOne({ role: 'developer' });
