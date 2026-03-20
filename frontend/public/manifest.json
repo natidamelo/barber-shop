@@ -1,0 +1,17 @@
+{
+  "name": "BarberPro",
+  "short_name": "BarberPro",
+  "description": "Professional Barber Shop Management System",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
