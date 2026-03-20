@@ -282,8 +282,8 @@ router.post('/', protect, authorize('admin', 'receptionist'), [
 
     // Determine the assigned role
     const assignedRole = (() => {
-      const isPrivileged = req.user.role === 'admin' || req.user.role === 'superadmin';
-      if (role === 'admin' && req.user.role === 'superadmin') return 'admin';
+      const isPrivileged = req.user.role === 'admin' || req.user.role === 'developer' || req.user.role === 'superadmin';
+      if (role === 'admin' && (req.user.role === 'developer' || req.user.role === 'superadmin')) return 'admin';
       if (role === 'receptionist' && isPrivileged) return 'receptionist';
       if (role === 'barber' && isPrivileged) return 'barber';
       if (role === 'washer' && isPrivileged) return 'washer';
