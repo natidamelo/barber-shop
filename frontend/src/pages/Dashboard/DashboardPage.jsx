@@ -65,7 +65,28 @@ const DashboardPage = () => {
   const user = authService.getStoredUser()
 
   const renderDashboard = () => {
-    switch (user?.role) {
+    const role = user?.role?.toLowerCase()
+
+    // Washer: no dashboard access — only Profile
+    if (role === 'washer') {
+      return (
+        <div className="card max-w-xl mx-auto">
+          <div className="card-body text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              No dashboard access
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Your account is set up as a washer. You don&apos;t have access to the dashboard. You can update your profile from the sidebar.
+            </p>
+            <p className="text-sm text-gray-500">
+              Contact an admin if you need different access.
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    switch (role) {
       case 'admin':
       case 'developer':
       case 'superadmin':

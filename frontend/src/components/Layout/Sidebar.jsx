@@ -45,8 +45,10 @@ const Sidebar = () => {
   const showBilling = location.pathname === '/dashboard/billing'
 
   const getNavigation = () => {
+    const role = user?.role?.toLowerCase()
+    
     // Washer: no dashboard access — only Profile
-    if (user?.role === 'washer') {
+    if (role === 'washer') {
       return [
         { name: 'Profile', href: '/dashboard/profile', icon: User },
       ]
@@ -58,7 +60,7 @@ const Sidebar = () => {
       { name: 'Profile', href: '/dashboard/profile', icon: User },
     ]
 
-    if (user?.role === 'developer' || user?.role === 'superadmin') {
+    if (role === 'developer' || role === 'superadmin') {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -72,7 +74,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (user?.role === 'admin') {
+    if (role === 'admin') {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -84,7 +86,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (user?.role === 'receptionist') {
+    if (role === 'receptionist') {
       return [
         ...baseNavigation,
         { name: 'Customers', href: '/dashboard/customers', icon: Users },
@@ -92,7 +94,7 @@ const Sidebar = () => {
       ]
     }
 
-    if (user?.role === 'barber') {
+    if (role === 'barber') {
       return [
         ...baseNavigation,
         { name: 'My Schedule', href: '/dashboard/schedule', icon: Clock },
