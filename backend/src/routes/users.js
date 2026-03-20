@@ -541,7 +541,7 @@ router.put('/:id', protect, [
           { _id: req.shop_id }
         ] 
       })
-    });
+    }).select('+password');
     
     if (!user) {
       return res.status(404).json({
