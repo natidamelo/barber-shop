@@ -6,8 +6,17 @@ const initializeUser = async () => {
   try {
     console.log('🌱 Initializing default users...');
     
-    // Check if developer exists
-    const developer = await User.findOne({ email: 'developer@barbershop.com' });
+    // Migrate any existing superadmin to developer
+    const migrationResult = await User.updateMany(
+      { role: 'superadmin' },
+      { role: 'developer' }
+    );
+    if (migrationResult.modifiedCount > 0) {
+      console.log(`✅ Migrated ${migrationResult.modifiedCount} superadmin(s) to developer role`);
+    }
+
+    // Check if default developer exists
+    const developer = await User.findOne({ role: 'developer' });
     if (!developer) {
       await User.create({
         first_name: 'Developer',
@@ -21,7 +30,7 @@ const initializeUser = async () => {
       });
       console.log('✅ Default developer "developer@barbershop.com" created');
     } else {
-      console.log('ℹ️  Developer "developer@barbershop.com" already exists');
+      console.log('ℹ️  Developer account already exists');
     }
     
     console.log('✅ User initialization complete');
