@@ -54,7 +54,7 @@ const DashboardHeader = () => {
                 {user?.first_name} {user?.last_name}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {user?.role}
+                {user?.role === 'developer' ? 'Developer' : user?.role}
               </p>
             </div>
             <div className="flex items-center space-x-2">

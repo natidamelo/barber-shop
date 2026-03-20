@@ -67,6 +67,8 @@ const DashboardPage = () => {
   const renderDashboard = () => {
     switch (user?.role) {
       case 'admin':
+      case 'developer':
+      case 'superadmin':
         return <AdminDashboard />
       case 'barber':
         return <BarberDashboard />
