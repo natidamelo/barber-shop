@@ -88,7 +88,11 @@ router.get('/', protect, authorize('admin', 'receptionist', 'developer'), [
 
     // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
     if (req.shop_id) {
-       query.admin_id = req.shop_id;
+       // An admin/shop owner should see themselves AND their staff
+       query.$or = [
+         { admin_id: req.shop_id },
+         { _id: req.shop_id }
+       ];
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -367,7 +371,12 @@ router.get('/:id', protect, [
 
     let user = await User.findOne({
       _id: req.params.id,
-      ...(req.shop_id && { admin_id: req.shop_id })
+      ...(req.shop_id && { 
+        $or: [
+          { admin_id: req.shop_id }, 
+          { _id: req.shop_id }
+        ] 
+      })
     }).select('first_name last_name email phone role status profile_image bio preferences commission_percentage wash_after_cut washer_id barber_id createdAt email_verified_at');
 
     if (!user) {
@@ -512,7 +521,12 @@ router.put('/:id', protect, [
 
     const user = await User.findOne({
       _id: req.params.id,
-      ...(req.shop_id && { admin_id: req.shop_id })
+      ...(req.shop_id && { 
+        $or: [
+          { admin_id: req.shop_id }, 
+          { _id: req.shop_id }
+        ] 
+      })
     });
     
     if (!user) {
@@ -600,7 +614,12 @@ router.post('/:id/reset-password', protect, authorize('admin', 'receptionist', '
 
     const targetUser = await User.findOne({
        _id: req.params.id,
-       ...(req.shop_id && { admin_id: req.shop_id })
+       ...(req.shop_id && { 
+         $or: [
+           { admin_id: req.shop_id }, 
+           { _id: req.shop_id }
+         ] 
+       })
     });
 
     if (!targetUser) {
@@ -683,7 +702,12 @@ router.delete('/:id', protect, authorize('admin', 'developer'), [
 
     const user = await User.findOne({
       _id: req.params.id,
-      ...(req.shop_id && { admin_id: req.shop_id })
+      ...(req.shop_id && { 
+        $or: [
+          { admin_id: req.shop_id }, 
+          { _id: req.shop_id }
+        ] 
+      })
     });
     
     if (!user) {

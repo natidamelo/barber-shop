@@ -490,15 +490,6 @@ const UserManagement = () => {
                                   <Lock className="h-4 w-4" />
                                   <span>{resettingUserId === (user._id || user.id) ? 'Resetting...' : 'Reset Password'}</span>
                                 </button>
-                                {user.status === 'inactive' && (
-                                  <button
-                                    onClick={() => handleToggleStatus(user, 'active')}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                  >
-                                    <Unlock className="h-4 w-4" />
-                                    <span>Activate User</span>
-                                  </button>
-                                )}
                               </div>
                             </div>
                           )}

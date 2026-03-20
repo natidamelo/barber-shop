@@ -23,7 +23,7 @@ const protect = async (req, res, next) => {
 
       // Get user from database
       const user = await User.findById(decoded.id)
-        .select('_id first_name last_name email role status');
+        .select('_id first_name last_name email role status admin_id');
 
       if (!user) {
         return res.status(401).json({
