@@ -507,7 +507,11 @@ router.put('/:id', protect, [
   body('profile_image')
     .optional({ checkFalsy: true, nullable: true })
     .isLength({ max: 500 })
-    .withMessage('Profile image URL cannot exceed 500 characters')
+    .withMessage('Profile image URL cannot exceed 500 characters'),
+  body('password')
+    .optional()
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters')
 ], async (req, res, next) => {
   try {
     // Check validation errors
@@ -551,7 +555,7 @@ router.put('/:id', protect, [
     }
 
     const updateData = {};
-    const { first_name, last_name, phone, bio, role, status, preferences, commission_percentage, wash_after_cut, washer_id, barber_id, profile_image } = req.body;
+    const { first_name, last_name, phone, bio, role, status, preferences, commission_percentage, wash_after_cut, washer_id, barber_id, profile_image, password } = req.body;
 
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
@@ -575,22 +579,28 @@ router.put('/:id', protect, [
             error: 'Commission percentage must be between 0 and 100'
           });
         }
-        // Only set commission_percentage for barbers
+        // Only set commission_percentage for barbers (using user instance directly)
         if (user.role === 'barber' || role === 'barber') {
-          updateData.commission_percentage = commission_percentage;
+          user.commission_percentage = commission_percentage;
         }
       }
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('first_name last_name email phone role status profile_image bio preferences wash_after_cut washer_id barber_id commission_percentage createdAt');
+    // Apply all updateData to user instance
+    Object.keys(updateData).forEach(key => {
+      user[key] = updateData[key];
+    });
+
+    if (password !== undefined && password.trim() !== '') {
+      user.password = password.trim();
+    }
+
+    // Save changes (this triggers pre-save hooks like password hashing)
+    await user.save();
 
     res.status(200).json({
       success: true,
-      data: updatedUser
+      data: user
     });
   } catch (error) {
     next(error);

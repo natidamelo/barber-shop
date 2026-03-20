@@ -12,7 +12,8 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
     role: 'customer',
     status: 'active',
     commission_percentage: '',
-    profile_image: ''
+    profile_image: '',
+    password: ''
   })
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -29,7 +30,8 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
         role: user.role || 'customer',
         status: user.status || 'active',
         commission_percentage: user.commission_percentage !== null && user.commission_percentage !== undefined ? user.commission_percentage : '',
-        profile_image: user.profile_image || ''
+        profile_image: user.profile_image || '',
+        password: ''
       })
     }
   }, [user, isOpen])
@@ -89,6 +91,9 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
         last_name: formData.last_name.trim(),
         role: formData.role,
         status: formData.status
+      }
+      if (formData.password?.trim()) {
+        updateData.password = formData.password.trim()
       }
       // Optional fields: send value or null so backend can clear them
       updateData.phone = formData.phone != null && formData.phone.trim() !== '' ? formData.phone.trim() : null
@@ -279,6 +284,21 @@ const UserEditModal = ({ user, isOpen, onClose, onUpdate }) => {
                 </p>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="text"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="input"
+                placeholder="Leave blank to keep current"
+              />
+              <p className="mt-1 text-xs text-gray-500">Type a new password to change it.</p>
+            </div>
           </div>
 
           <div>
