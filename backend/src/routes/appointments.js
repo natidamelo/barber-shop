@@ -126,6 +126,7 @@ const createInventoryTransactionsForAppointment = async (appointment, userId) =>
       await InventoryTransaction.create({
         inventory_id: item._id,
         user_id: userId,
+        admin_id: appointment.admin_id || req.shop_id,
         transaction_type: 'usage',
         quantity: -quantity, // Negative for usage
         previous_stock: previousStock,
@@ -170,8 +171,13 @@ router.get('/', protect, [
     const { date, start_date, end_date, status, barber_id, customer_id, page = 1, limit = 10 } = req.query;
     
     let query = {};
+    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
+    if (req.shop_id) {
+      query.admin_id = req.shop_id;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // Role-based filtering: customers see only their own appointments; barbers only their own; admin/receptionist see all
+    // Role-based filtering within the shop
     if (req.user.role === 'customer') {
       query.customer_id = req.user._id || req.user.id;
     } else if (req.user.role === 'barber') {
@@ -337,14 +343,16 @@ router.get('/walk-in-availability', protect, async (req, res, next) => {
       }
     }
 
-    // Get all active barbers
+    // Get all active barbers in this shop
     const barbers = await User.find({ 
       role: 'barber', 
-      status: 'active' 
+      status: 'active',
+      admin_id: req.shop_id
     }).select('first_name last_name email phone');
 
-    // Get all active appointments in the next hour
+    // Get all active appointments for this shop in the next hour
     const activeAppointments = await Appointment.find({
+      admin_id: req.shop_id,
       status: { $in: ['scheduled', 'confirmed', 'in_progress'] },
       appointment_date: { $lte: oneHourFromNow.toDate() },
       end_time: { $gte: now.toDate() }
@@ -591,23 +599,25 @@ router.post('/', protect, [
       finalCustomerId = customer_id;
     }
 
-    // Verify barber exists
+    // Verify barber exists in this shop
     const barber = await User.findOne({ 
       _id: barber_id, 
-      role: 'barber'
+      role: 'barber',
+      admin_id: req.shop_id
     });
 
     if (!barber) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid barber or barber not available'
+        error: 'Invalid barber or barber not available at your shop'
       });
     }
 
-    // Verify service exists and is active
+    // Verify service exists and is active for this shop
     const service = await Service.findOne({ 
       _id: service_id, 
-      is_active: true 
+      is_active: true,
+      admin_id: req.shop_id
     });
 
     if (!service) {
@@ -645,7 +655,9 @@ router.post('/', protect, [
       let conflict = await Appointment.checkConflict(
         barber_id,
         appointmentStart.toDate(),
-        appointmentEnd.toDate()
+        appointmentEnd.toDate(),
+        null,
+        req.shop_id
       );
       
       if (conflict) {
@@ -725,7 +737,9 @@ router.post('/', protect, [
           conflict = await Appointment.checkConflict(
             barber_id,
             appointmentStart.toDate(),
-            appointmentEnd.toDate()
+            appointmentEnd.toDate(),
+            null,
+            req.shop_id
           );
           
           if (!conflict) {
@@ -771,7 +785,9 @@ router.post('/', protect, [
       const conflict = await Appointment.checkConflict(
         barber_id,
         appointmentStart.toDate(),
-        appointmentEnd.toDate()
+        appointmentEnd.toDate(),
+        null,
+        req.shop_id
       );
 
       if (conflict) {
@@ -820,12 +836,13 @@ router.post('/', protect, [
       service_id,
       appointment_date: appointmentStart.toDate(),
       end_time: appointmentEnd.toDate(),
+      is_walk_in: isWalkIn,
+      customer_notes,
       price: service.price,
       shop_cut: commission.shop_cut,
       barber_commission: commission.barber_commission,
-      customer_notes,
       status: appointmentStatus,
-      is_walk_in: isWalkIn
+      admin_id: req.shop_id
     });
 
     // If appointment is created as completed, create inventory transactions

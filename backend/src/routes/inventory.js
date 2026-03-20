@@ -27,8 +27,12 @@ router.get('/', protect, authorize('admin', 'barber'), [
 
     const { category, low_stock, search, sort = 'name', order = 'asc', page = 1, limit = 10 } = req.query;
     
-    // Build base query
+    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
     let query = { is_active: true };
+    if (req.shop_id) {
+      query.admin_id = req.shop_id;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Apply filters
     if (category) {
@@ -116,7 +120,7 @@ router.get('/', protect, authorize('admin', 'barber'), [
 // @access  Private (Admin/Barber)
 router.get('/low-stock', protect, authorize('admin', 'barber'), async (req, res, next) => {
   try {
-    const lowStockItems = await Inventory.findLowStock();
+    const lowStockItems = await Inventory.findLowStock(req.shop_id);
 
     res.status(200).json({
       success: true,
@@ -135,7 +139,8 @@ router.get('/categories', protect, authorize('admin', 'barber'), async (req, res
   try {
     const categories = await Inventory.distinct('category', {
       category: { $ne: null, $exists: true },
-      is_active: true
+      is_active: true,
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     const categoryList = categories.filter(cat => cat && cat.trim() !== '').sort();
@@ -165,7 +170,10 @@ router.get('/:id', protect, authorize('admin', 'barber'), [
       });
     }
 
-    const item = await Inventory.findById(req.params.id);
+    const item = await Inventory.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
 
     if (!item) {
       return res.status(404).json({
@@ -269,9 +277,12 @@ router.post('/', protect, authorize('admin'), [
       image_url, notes
     } = req.body;
 
-    // Check if SKU already exists
+    // Check if SKU already exists for this shop
     if (sku) {
-      const existingItem = await Inventory.findOne({ sku });
+      const existingItem = await Inventory.findOne({ 
+        sku, 
+        ...(req.shop_id && { admin_id: req.shop_id })
+      });
       if (existingItem) {
         return res.status(400).json({
           success: false,
@@ -296,7 +307,8 @@ router.post('/', protect, authorize('admin'), [
       supplier,
       supplier_contact,
       image_url,
-      notes
+      notes,
+      admin_id: req.shop_id // Linked to this shop
     });
 
     // Create initial transaction if stock > 0
@@ -304,6 +316,7 @@ router.post('/', protect, authorize('admin'), [
       await InventoryTransaction.create({
         inventory_id: item._id,
         user_id: req.user._id || req.user.id,
+        admin_id: req.shop_id, // Linked to this shop
         transaction_type: 'purchase',
         quantity: current_stock,
         previous_stock: 0,
@@ -379,7 +392,10 @@ router.put('/:id', protect, authorize('admin'), [
       });
     }
 
-    const item = await Inventory.findById(req.params.id);
+    const item = await Inventory.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!item) {
       return res.status(404).json({
@@ -416,7 +432,8 @@ router.put('/:id', protect, authorize('admin'), [
       // Check if another item has this SKU
       const existingItem = await Inventory.findOne({ 
         sku, 
-        _id: { $ne: req.params.id } 
+        _id: { $ne: req.params.id },
+        ...(req.shop_id && { admin_id: req.shop_id })
       });
       
       if (existingItem) {
@@ -481,7 +498,10 @@ router.post('/:id/adjust', protect, authorize('admin', 'barber'), [
 
     const { quantity, transaction_type, unit_cost, reference_number, notes } = req.body;
     
-    const item = await Inventory.findById(req.params.id);
+    const item = await Inventory.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!item) {
       return res.status(404).json({
@@ -544,6 +564,7 @@ router.post('/:id/adjust', protect, authorize('admin', 'barber'), [
     const transactionData = {
       inventory_id: req.params.id,
       user_id: userId,
+      admin_id: req.shop_id, // Linked to this shop
       transaction_type,
       quantity: actualQuantity,
       previous_stock: previousStock,
@@ -606,7 +627,10 @@ router.get('/:id/transactions', protect, authorize('admin', 'barber'), [
 
     const { type, page = 1, limit = 10 } = req.query;
     
-    let query = { inventory_id: req.params.id };
+    let query = { 
+      inventory_id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    };
 
     if (type) {
       query.transaction_type = type;
@@ -655,7 +679,10 @@ router.delete('/:id', protect, authorize('admin'), [
       });
     }
 
-    const item = await Inventory.findById(req.params.id);
+    const item = await Inventory.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!item) {
       return res.status(404).json({

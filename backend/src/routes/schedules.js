@@ -27,7 +27,13 @@ router.get('/', protect, [
     
     let query = {};
 
-    // Role-based filtering
+    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Role-based filtering within the shop
     if (req.user.role === 'barber') {
       query.staff_id = req.user._id || req.user.id;
     } else if (staff_id && (req.user.role === 'admin' || req.user.role === 'receptionist')) {
@@ -84,8 +90,10 @@ router.get('/:id', protect, [
       });
     }
 
-    const schedule = await StaffSchedule.findById(req.params.id)
-      .populate('staff_id', 'first_name last_name email');
+    const schedule = await StaffSchedule.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    }).populate('staff_id', 'first_name last_name email');
 
     if (!schedule) {
       return res.status(404).json({
@@ -162,8 +170,11 @@ router.post('/', protect, authorize('admin', 'barber'), [
       finalStaffId = req.user._id || req.user.id;
     }
 
-    // Verify staff exists
-    const staff = await User.findById(finalStaffId);
+    // Verify staff exists in this shop
+    const staff = await User.findOne({
+      _id: finalStaffId,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     if (!staff || (staff.role !== 'barber' && staff.role !== 'receptionist')) {
       return res.status(400).json({
         success: false,
@@ -171,10 +182,11 @@ router.post('/', protect, authorize('admin', 'barber'), [
       });
     }
 
-    // Check if schedule already exists for this date
+    // Check if schedule already exists for this date in this shop
     const existingSchedule = await StaffSchedule.findOne({
       staff_id: finalStaffId,
-      date: new Date(date)
+      date: new Date(date),
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     if (existingSchedule) {
@@ -186,6 +198,7 @@ router.post('/', protect, authorize('admin', 'barber'), [
 
     const schedule = await StaffSchedule.create({
       staff_id: finalStaffId,
+      admin_id: req.shop_id, // Linked to this shop
       date: new Date(date),
       start_time,
       end_time,
@@ -250,7 +263,10 @@ router.put('/:id', protect, authorize('admin', 'barber'), [
       });
     }
 
-    const schedule = await StaffSchedule.findById(req.params.id);
+    const schedule = await StaffSchedule.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
 
     if (!schedule) {
       return res.status(404).json({
@@ -315,7 +331,10 @@ router.delete('/:id', protect, authorize('admin', 'barber'), [
       });
     }
 
-    const schedule = await StaffSchedule.findById(req.params.id);
+    const schedule = await StaffSchedule.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
 
     if (!schedule) {
       return res.status(404).json({

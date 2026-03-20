@@ -4,9 +4,14 @@ const serviceSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Service name is required'],
-    unique: true,
     trim: true,
     maxlength: [255, 'Service name cannot exceed 255 characters']
+  },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required'],
+    index: true
   },
   description: {
     type: String,

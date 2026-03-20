@@ -39,9 +39,9 @@ const RegisterPage = () => {
 
     try {
       const { confirmPassword, ...registerData } = formData
-      await authService.register(registerData)
-      toast.success('Registration successful!')
-      navigate('/dashboard')
+      const result = await authService.register(registerData)
+      toast.success(result.message || 'Registration successful! Please wait for activation.', { duration: 6000 })
+      navigate('/login')
     } catch (error) {
       const message = error.response?.data?.error || 'Registration failed'
       toast.error(message)

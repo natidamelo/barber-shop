@@ -58,7 +58,7 @@ const Sidebar = () => {
       { name: 'Profile', href: '/dashboard/profile', icon: User },
     ]
 
-    if (user?.role === 'superadmin') {
+    if (user?.role === 'developer') {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -139,7 +139,7 @@ const Sidebar = () => {
               {user?.first_name} {user?.last_name}
             </p>
             <p className="text-xs text-gray-500 capitalize">
-              {user?.role}
+              {user?.role === 'developer' ? 'Developer' : user?.role}
             </p>
           </div>
         </div>
@@ -169,8 +169,8 @@ const Sidebar = () => {
             )
           })}
 
-          {/* Quick Actions for Receptionist, Admin and Superadmin */}
-          {(user?.role === 'receptionist' || user?.role === 'admin' || user?.role === 'superadmin') && (
+          {/* Quick Actions for Receptionist, Admin and Developer */}
+          {(user?.role === 'receptionist' || user?.role === 'admin' || user?.role === 'developer') && (
             <>
               <div className="pt-4 mt-4 border-t border-gray-200">
                 <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">

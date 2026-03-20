@@ -128,7 +128,7 @@ const LoginPage = () => {
         setLoginUserName(result.user?.first_name || '')
         setLicenseWelcome(result.license_info)
       } else {
-        // superadmin — go straight to dashboard
+        // developer — go straight to dashboard
         toast.success('Login successful!')
         navigate('/dashboard')
       }
@@ -157,7 +157,7 @@ const LoginPage = () => {
     : ''
 
   const demoAccounts = [
-    { label: 'Super Admin', email: 'admin@barbershop.com', password: 'Admin123', badge: 'No license needed', badgeColor: 'bg-purple-100 text-purple-700' },
+    { label: 'Developer', email: 'developer@barbershop.com', password: 'Admin123', badge: 'No license needed', badgeColor: 'bg-indigo-100 text-indigo-700' },
     { label: 'Barber', email: 'john.smith@barbershop.com', password: 'barber123', badge: 'Needs license', badgeColor: 'bg-blue-100 text-blue-700' },
     { label: 'Customer', email: 'david.wilson@example.com', password: 'customer123', badge: 'Needs license', badgeColor: 'bg-gray-100 text-gray-600' }
   ]

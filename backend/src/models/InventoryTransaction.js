@@ -11,6 +11,11 @@ const inventoryTransactionSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'User ID is required']
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
+  },
   transaction_type: {
     type: String,
     required: [true, 'Transaction type is required'],

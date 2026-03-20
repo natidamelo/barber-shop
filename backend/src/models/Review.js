@@ -21,6 +21,11 @@ const reviewSchema = new mongoose.Schema({
     ref: 'Service',
     required: [true, 'Service ID is required']
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
+  },
   rating: {
     type: Number,
     required: [true, 'Rating is required'],

@@ -27,22 +27,33 @@ router.post('/', protect, authorize('customer'), [
     const { barber_id, points, appointment_id, message } = req.body;
     const customerId = req.user._id || req.user.id;
 
-    const barber = await User.findOne({ _id: barber_id, role: 'barber' });
+    const barber = await User.findOne({ 
+      _id: barber_id, 
+      role: 'barber',
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     if (!barber) {
-      return res.status(400).json({ success: false, error: 'Invalid barber' });
+      return res.status(400).json({ success: false, error: 'Invalid barber at your shop' });
     }
 
-    // Get customer's total spent (paid appointments)
+    // Get customer's total spent (paid appointments) in this shop
     const customerSpent = await Appointment.aggregate([
-      { $match: { customer_id: new mongoose.Types.ObjectId(customerId), payment_status: 'paid' } },
+      { $match: { 
+        customer_id: new mongoose.Types.ObjectId(customerId), 
+        payment_status: 'paid',
+        ...(req.shop_id && { admin_id: new mongoose.Types.ObjectId(req.shop_id) })
+      } },
       { $group: { _id: null, total: { $sum: { $ifNull: ['$price', 0] } } } }
     ]);
     const totalSpent = customerSpent[0]?.total || 0;
     const earnedPoints = Math.floor(totalSpent / 10) * POINTS_PER_10_ETB;
 
-    // Get points already given by this customer
+    // Get points already given by this customer in this shop
     const pointsGiven = await BarberTip.aggregate([
-      { $match: { customer_id: new mongoose.Types.ObjectId(customerId) } },
+      { $match: { 
+        customer_id: new mongoose.Types.ObjectId(customerId),
+        ...(req.shop_id && { admin_id: new mongoose.Types.ObjectId(req.shop_id) })
+      } },
       { $group: { _id: null, total: { $sum: '$points' } } }
     ]);
     const totalGiven = pointsGiven[0]?.total || 0;
@@ -55,13 +66,14 @@ router.post('/', protect, authorize('customer'), [
       });
     }
 
-    // If appointment_id provided, verify it's a completed appointment with this barber
+    // If appointment_id provided, verify it's a completed appointment with this barber in this shop
     if (appointment_id) {
       const apt = await Appointment.findOne({
         _id: appointment_id,
         customer_id: customerId,
         barber_id,
-        status: 'completed'
+        status: 'completed',
+        ...(req.shop_id && { admin_id: req.shop_id })
       });
       if (!apt) {
         return res.status(400).json({ success: false, error: 'Invalid or incomplete appointment' });
@@ -72,6 +84,7 @@ router.post('/', protect, authorize('customer'), [
       customer_id: customerId,
       barber_id,
       appointment_id: appointment_id || null,
+      admin_id: req.shop_id, // Linked to this shop
       points,
       message: message?.trim() || ''
     });
@@ -102,6 +115,10 @@ router.get('/', protect, [
     const { barber_id, page = 1, limit = 20 } = req.query;
 
     let query = {};
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+    
     if (req.user.role === 'barber') {
       query.barber_id = req.user._id || req.user.id;
     } else if (barber_id && (req.user.role === 'admin' || req.user.role === 'receptionist')) {

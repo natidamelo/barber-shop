@@ -72,25 +72,25 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<DashboardPage />} />
               <Route path="appointments" element={<AppointmentsPage />} />
-              <Route path="schedule" element={<ProtectedRoute roles={['barber', 'admin', 'superadmin']}><SchedulePage /></ProtectedRoute>} />
+              <Route path="schedule" element={<ProtectedRoute roles={['barber', 'admin', 'developer']}><SchedulePage /></ProtectedRoute>} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="reviews" element={<ReviewsPage />} />
               
               {/* Customer Management */}
-              <Route path="customers" element={<ProtectedRoute roles={['admin', 'superadmin', 'receptionist']}><CustomersPage /></ProtectedRoute>} />
+              <Route path="customers" element={<ProtectedRoute roles={['admin', 'developer', 'receptionist']}><CustomersPage /></ProtectedRoute>} />
               
               {/* Billing */}
-              <Route path="billing" element={<ProtectedRoute roles={['admin', 'superadmin', 'receptionist']}><BillingPage /></ProtectedRoute>} />
+              <Route path="billing" element={<ProtectedRoute roles={['admin', 'developer', 'receptionist']}><BillingPage /></ProtectedRoute>} />
               
               {/* Admin routes */}
-              <Route path="admin" element={<ProtectedRoute roles={['admin', 'superadmin']}><AdminDashboard /></ProtectedRoute>} />
-              <Route path="admin/users" element={<ProtectedRoute roles={['admin', 'superadmin', 'receptionist']}><UserManagement /></ProtectedRoute>} />
-              <Route path="admin/services" element={<ProtectedRoute roles={['admin', 'superadmin', 'barber', 'receptionist']}><ServiceManagement /></ProtectedRoute>} />
-              <Route path="admin/inventory" element={<ProtectedRoute roles={['admin', 'superadmin', 'barber']}><InventoryManagement /></ProtectedRoute>} />
-              <Route path="admin/reports" element={<ProtectedRoute roles={['admin', 'superadmin']}><ReportsPage /></ProtectedRoute>} />
-              <Route path="admin/settings" element={<ProtectedRoute roles={['admin', 'superadmin']}><SettingsPage /></ProtectedRoute>} />
-              <Route path="admin/licenses" element={<ProtectedRoute roles={['superadmin']}><LicensesPage /></ProtectedRoute>} />
-              <Route path="admin/license-dashboard" element={<ProtectedRoute roles={['superadmin']}><LicenseAdminDashboard /></ProtectedRoute>} />
+              <Route path="admin" element={<ProtectedRoute roles={['admin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
+              <Route path="admin/users" element={<ProtectedRoute roles={['admin', 'developer', 'receptionist']}><UserManagement /></ProtectedRoute>} />
+              <Route path="admin/services" element={<ProtectedRoute roles={['admin', 'developer', 'barber', 'receptionist']}><ServiceManagement /></ProtectedRoute>} />
+              <Route path="admin/inventory" element={<ProtectedRoute roles={['admin', 'developer', 'barber']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="admin/reports" element={<ProtectedRoute roles={['admin', 'developer']}><ReportsPage /></ProtectedRoute>} />
+              <Route path="admin/settings" element={<ProtectedRoute roles={['admin', 'developer']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="admin/licenses" element={<ProtectedRoute roles={['developer']}><LicensesPage /></ProtectedRoute>} />
+              <Route path="admin/license-dashboard" element={<ProtectedRoute roles={['developer']}><LicenseAdminDashboard /></ProtectedRoute>} />
             </Route>
 
             {/* 404 page */}

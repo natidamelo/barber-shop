@@ -53,6 +53,10 @@ router.get('/', optionalAuth, [
     const { barber_id, service_id, rating, verified, sort = 'createdAt', order = 'desc', page = 1, limit = 10 } = req.query;
 
     let query = { is_published: true };
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+    
     if (barber_id) query.barber_id = barber_id;
     if (service_id) query.service_id = service_id;
     if (rating) query.rating = parseInt(rating);
@@ -152,8 +156,10 @@ router.get('/:id', optionalAuth, [
       return res.status(400).json({ success: false, error: errors.array()[0].msg });
     }
 
-    const review = await Review.findById(req.params.id)
-      .populate('customer_id', 'first_name last_name')
+    const review = await Review.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    }).populate('customer_id', 'first_name last_name')
       .populate('barber_id', 'first_name last_name')
       .populate('service_id', 'name');
 
@@ -190,14 +196,21 @@ router.post('/', protect, authorize('customer'), [
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
-    const barber = await User.findOne({ _id: barber_id, role: 'barber' });
+    const barber = await User.findOne({ 
+      _id: barber_id, 
+      role: 'barber',
+      admin_id: req.shop_id 
+    });
     if (!barber) {
-      return res.status(400).json({ success: false, error: 'Invalid barber' });
+      return res.status(400).json({ success: false, error: 'Invalid barber at your shop' });
     }
 
-    const service = await Service.findById(service_id);
+    const service = await Service.findOne({ 
+      _id: service_id,
+      admin_id: req.shop_id
+    });
     if (!service) {
-      return res.status(400).json({ success: false, error: 'Invalid service' });
+      return res.status(400).json({ success: false, error: 'Invalid service at your shop' });
     }
 
     let isVerified = false;
@@ -240,7 +253,8 @@ router.post('/', protect, authorize('customer'), [
       rating: ratingNum,
       comment: (comment && String(comment).trim()) || '',
       is_verified: isVerified,
-      is_published: true
+      is_published: true,
+      admin_id: req.shop_id
     });
 
     await review.populate([
@@ -274,6 +288,9 @@ router.put('/:id', protect, [
     let query = { _id: req.params.id };
     if (req.user.role === 'customer') {
       query.customer_id = req.user._id || req.user.id;
+    }
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
     }
 
     const review = await Review.findOne(query);
@@ -315,6 +332,9 @@ router.delete('/:id', protect, [
     if (req.user.role === 'customer') {
       query.customer_id = req.user._id || req.user.id;
     }
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
 
     const review = await Review.findOneAndDelete(query);
     if (!review) {
@@ -340,13 +360,21 @@ router.get('/barber/:barberId/stats', [
     }
 
     const barberId = req.params.barberId;
-    const barber = await User.findOne({ _id: barberId, role: 'barber' });
+    const barber = await User.findOne({ 
+      _id: barberId, 
+      role: 'barber',
+      admin_id: req.shop_id 
+    });
     if (!barber) {
-      return res.status(404).json({ success: false, error: 'Barber not found' });
+      return res.status(404).json({ success: false, error: 'Barber not found at your shop' });
     }
 
     const stats = await Review.aggregate([
-      { $match: { barber_id: new mongoose.Types.ObjectId(barberId), is_published: true } },
+      { $match: { 
+        barber_id: new mongoose.Types.ObjectId(barberId), 
+        is_published: true,
+        ...(req.shop_id && { admin_id: new mongoose.Types.ObjectId(req.shop_id) })
+      } },
       {
         $group: {
           _id: null,
@@ -362,7 +390,11 @@ router.get('/barber/:barberId/stats', [
     ]);
 
     const serviceStats = await Review.aggregate([
-      { $match: { barber_id: new mongoose.Types.ObjectId(barberId), is_published: true } },
+      { $match: { 
+        barber_id: new mongoose.Types.ObjectId(barberId), 
+        is_published: true,
+        ...(req.shop_id && { admin_id: new mongoose.Types.ObjectId(req.shop_id) })
+      } },
       {
         $group: {
           _id: '$service_id',
@@ -390,7 +422,11 @@ router.get('/barber/:barberId/stats', [
       }
     ]);
 
-    const recentReviews = await Review.find({ barber_id: barberId, is_published: true })
+    const recentReviews = await Review.find({ 
+      barber_id: barberId, 
+      is_published: true,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    })
       .populate('customer_id', 'first_name last_name')
       .populate('service_id', 'name')
       .sort({ createdAt: -1 })
@@ -440,13 +476,20 @@ router.get('/service/:serviceId/stats', [
       return res.status(400).json({ success: false, error: errors.array()[0].msg });
     }
 
-    const service = await Service.findById(req.params.serviceId);
+    const service = await Service.findOne({
+       _id: req.params.serviceId,
+       admin_id: req.shop_id
+    });
     if (!service) {
-      return res.status(404).json({ success: false, error: 'Service not found' });
+      return res.status(404).json({ success: false, error: 'Service not found at your shop' });
     }
 
-    const stats = await Review.aggregate([
-      { $match: { service_id: new mongoose.Types.ObjectId(req.params.serviceId), is_published: true } },
+    const statsForService = await Review.aggregate([
+      { $match: { 
+        service_id: new mongoose.Types.ObjectId(req.params.serviceId), 
+        is_published: true,
+        ...(req.shop_id && { admin_id: new mongoose.Types.ObjectId(req.shop_id) })
+      } },
       {
         $group: {
           _id: null,

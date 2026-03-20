@@ -4,9 +4,13 @@ const settingsSchema = new mongoose.Schema({
   key: {
     type: String,
     required: [true, 'Setting key is required'],
-    unique: true,
     trim: true,
     maxlength: [100, 'Setting key cannot exceed 100 characters']
+  },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
   },
   value: {
     type: mongoose.Schema.Types.Mixed,

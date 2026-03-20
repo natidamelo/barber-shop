@@ -18,11 +18,11 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     return <Navigate to="/dashboard/profile" replace />
   }
 
-  // superadmin passes all role checks
-  const isSuperAdmin = user?.role === 'superadmin'
+  // developer passes all role checks
+  const isDeveloper = user?.role === 'developer'
 
   // If roles are specified, check if user has required role
-  if (roles.length > 0 && !isSuperAdmin && (!user || !roles.includes(user.role))) {
+  if (roles.length > 0 && !isDeveloper && (!user || !roles.includes(user.role))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

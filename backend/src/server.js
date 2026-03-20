@@ -177,9 +177,18 @@ const startServer = async () => {
     // Connect to database
     await connectDB();
     
-    // Initialize default data (settings, superadmin if none exist)
+    // Initialize default data (settings, developer if none exist)
     await initializeSettings();
     await initializeUser();
+    
+    // Developer Access Logs
+    // Logs all requests made by the developer account for audit purposes
+    app.use((req, res, next) => {
+      if (req.user && req.user.role === 'developer') {
+        console.log(`[Developer Action] ${req.method} ${req.originalUrl} by ${req.user.email}`);
+      }
+      next();
+    });
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

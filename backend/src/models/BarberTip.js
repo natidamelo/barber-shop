@@ -16,6 +16,11 @@ const barberTipSchema = new mongoose.Schema({
     ref: 'Appointment',
     default: null
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
+  },
   points: {
     type: Number,
     required: [true, 'Points is required'],

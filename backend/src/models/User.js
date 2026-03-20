@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'barber', 'customer', 'receptionist', 'washer'],
+    enum: ['admin', 'barber', 'customer', 'receptionist', 'washer', 'developer'],
     default: 'customer'
   },
   status: {
@@ -83,6 +83,7 @@ const userSchema = new mongoose.Schema({
   admin_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    index: true,
     default: null
   },
   // The license key bound to this admin's shop (only set on admin accounts)

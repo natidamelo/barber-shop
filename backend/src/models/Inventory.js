@@ -12,9 +12,14 @@ const inventorySchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required'],
+    index: true
+  },
   sku: {
     type: String,
-    unique: true,
     trim: true,
     sparse: true, // Allow multiple null values
     maxlength: [100, 'SKU cannot exceed 100 characters']
@@ -124,19 +129,31 @@ inventorySchema.virtual('formatted_selling_price').get(function() {
 });
 
 // Static method to find low stock items
-inventorySchema.statics.findLowStock = function() {
-  return this.find({
+inventorySchema.statics.findLowStock = function(adminId = null) {
+  const query = {
     is_active: true,
     $expr: { $lte: ['$current_stock', '$minimum_stock'] }
-  }).sort({ current_stock: 1 });
+  };
+  
+  if (adminId) {
+    query.admin_id = adminId;
+  }
+  
+  return this.find(query).sort({ current_stock: 1 });
 };
 
 // Static method to find by category
-inventorySchema.statics.findByCategory = function(category) {
-  return this.find({
+inventorySchema.statics.findByCategory = function(category, adminId = null) {
+  const query = {
     category: new RegExp(category, 'i'),
     is_active: true
-  }).sort({ name: 1 });
+  };
+  
+  if (adminId) {
+    query.admin_id = adminId;
+  }
+  
+  return this.find(query).sort({ name: 1 });
 };
 
 module.exports = mongoose.model('Inventory', inventorySchema);

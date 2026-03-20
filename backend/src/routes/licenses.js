@@ -7,7 +7,7 @@ const router = express.Router();
 
 // ─── Admin: List all licenses ────────────────────────────────────────────────
 // GET /api/licenses
-router.get('/', protect, authorize('superadmin'), async (req, res, next) => {
+router.get('/', protect, authorize('developer'), async (req, res, next) => {
   try {
     const { status, search, page = 1, limit = 50 } = req.query;
     const query = {};
@@ -51,7 +51,7 @@ router.get('/', protect, authorize('superadmin'), async (req, res, next) => {
 
 // ─── Admin: Generate new license ─────────────────────────────────────────────
 // POST /api/licenses/generate
-router.post('/generate', protect, authorize('superadmin'), [
+router.post('/generate', protect, authorize('developer'), [
   body('customer_name').trim().notEmpty().withMessage('Customer name is required'),
   body('customer_email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('customer_phone').optional().trim(),
@@ -97,7 +97,7 @@ router.post('/generate', protect, authorize('superadmin'), [
 
 // ─── Admin: Renew license (extend by 1 year) ─────────────────────────────────
 // PUT /api/licenses/:id/renew
-router.put('/:id/renew', protect, authorize('superadmin'), async (req, res, next) => {
+router.put('/:id/renew', protect, authorize('developer'), async (req, res, next) => {
   try {
     const license = await License.findById(req.params.id);
     if (!license) {
@@ -130,7 +130,7 @@ router.put('/:id/renew', protect, authorize('superadmin'), async (req, res, next
 
 // ─── Admin: Update license status ────────────────────────────────────────────
 // PUT /api/licenses/:id/status
-router.put('/:id/status', protect, authorize('superadmin'), [
+router.put('/:id/status', protect, authorize('developer'), [
   body('status').isIn(['active', 'suspended', 'pending_activation']).withMessage('Invalid status')
 ], async (req, res, next) => {
   try {
@@ -154,7 +154,7 @@ router.put('/:id/status', protect, authorize('superadmin'), [
 
 // ─── Admin: Delete license ────────────────────────────────────────────────────
 // DELETE /api/licenses/:id
-router.delete('/:id', protect, authorize('superadmin'), async (req, res, next) => {
+router.delete('/:id', protect, authorize('developer'), async (req, res, next) => {
   try {
     const license = await License.findByIdAndDelete(req.params.id);
     if (!license) return res.status(404).json({ success: false, error: 'License not found' });
@@ -285,7 +285,7 @@ router.post('/validate', [
 
 // ─── Admin: Get single license ────────────────────────────────────────────────
 // GET /api/licenses/:id
-router.get('/:id', protect, authorize('superadmin'), async (req, res, next) => {
+router.get('/:id', protect, authorize('developer'), async (req, res, next) => {
   try {
     const license = await License.findById(req.params.id);
     if (!license) return res.status(404).json({ success: false, error: 'License not found' });

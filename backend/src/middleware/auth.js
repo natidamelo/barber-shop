@@ -40,6 +40,22 @@ const protect = async (req, res, next) => {
       }
 
       req.user = user;
+
+      // ── Multi-Tenancy (Data Isolation) Logic ─────────────────────────────────
+      // Determine the shop owner (tenant) for this user.
+      // • admin: the shop owner (they are their own shop ID)
+      // • staff/customers: linked    // Attach shop_id to request
+      // For admin, it's their own ID. For staff/customer, it's their admin_id.
+      // For developer, it's null (global access)
+      if (user.role === 'admin') {
+        req.shop_id = user._id || user.id;
+      } else if (user.role === 'developer') {
+        req.shop_id = null;
+      } else {
+        req.shop_id = user.admin_id;
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
       next();
     } catch (error) {
       console.error('Token verification error:', error);

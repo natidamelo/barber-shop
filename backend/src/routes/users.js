@@ -86,9 +86,15 @@ router.get('/', protect, authorize('admin', 'receptionist'), [
     
     let query = {};
 
-    // Superadmin accounts are never visible to non-superadmin users
-    if (req.user.role !== 'superadmin') {
-      query.role = { $ne: 'superadmin' };
+    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
+    if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // developer accounts are never visible to non-developer users
+    if (req.user.role !== 'developer') {
+      query.role = { $ne: 'developer' };
     }
 
     // Apply filters
@@ -138,9 +144,21 @@ router.get('/', protect, authorize('admin', 'receptionist'), [
 // @desc    Get all barbers
 // @route   GET /api/users/barbers
 // @access  Public
-router.get('/barbers', async (req, res, next) => {
+router.get('/barbers', [
+  query('shop_id').optional().isMongoId().withMessage('Shop ID must be a valid MongoDB ID')
+], async (req, res, next) => {
   try {
-    const barbers = await User.find({ role: 'barber', status: 'active' })
+    const { shop_id } = req.query;
+    
+    // Scoped query for barbers
+    let query = { role: 'barber', status: 'active' };
+    if (shop_id) {
+       query.admin_id = shop_id;
+    } else if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+
+    const barbers = await User.find(query)
       .select('first_name last_name email phone profile_image bio')
       .sort({ first_name: 1 });
 
@@ -233,11 +251,11 @@ router.post('/', protect, authorize('admin', 'receptionist'), [
       });
     }
 
-    // Only superadmin can create admin accounts
-    if (role === 'admin' && req.user.role !== 'superadmin') {
+    // Only developer can create admin accounts
+    if (role === 'admin' && req.user.role !== 'developer') {
       return res.status(403).json({
         success: false,
-        error: 'Only the super admin can create admin accounts'
+        error: 'Only the developer can create admin accounts'
       });
     }
 
@@ -288,7 +306,7 @@ router.post('/', protect, authorize('admin', 'receptionist'), [
     };
     
     // Add commission_percentage if creating a barber and it's provided
-    if (assignedRole === 'barber' && (req.user.role === 'admin' || req.user.role === 'superadmin') && commission_percentage !== undefined) {
+    if (assignedRole === 'barber' && (req.user.role === 'admin' || req.user.role === 'developer') && commission_percentage !== undefined) {
       if (commission_percentage < 0 || commission_percentage > 100) {
         return res.status(400).json({
           success: false,
@@ -347,8 +365,10 @@ router.get('/:id', protect, [
       });
     }
 
-    let user = await User.findById(req.params.id)
-      .select('first_name last_name email phone role status profile_image bio preferences commission_percentage wash_after_cut washer_id barber_id createdAt email_verified_at');
+    let user = await User.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    }).select('first_name last_name email phone role status profile_image bio preferences commission_percentage wash_after_cut washer_id barber_id createdAt email_verified_at');
 
     if (!user) {
       return res.status(404).json({
@@ -357,14 +377,14 @@ router.get('/:id', protect, [
       });
     }
 
-    // Superadmin profile is invisible to everyone except superadmin
-    if (user.role === 'superadmin' && req.user.role !== 'superadmin') {
+    // developer profile is invisible to everyone except developer
+    if (user.role === 'developer' && req.user.role !== 'developer') {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     // Users can only view their own profile, admins/receptionist can view any
     const userId = req.user._id || req.user.id;
-    if (req.user.role !== 'admin' && req.user.role !== 'receptionist' && req.user.role !== 'superadmin' && user._id.toString() !== userId.toString()) {
+    if (req.user.role !== 'admin' && req.user.role !== 'receptionist' && req.user.role !== 'developer' && user._id.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to view this user'
@@ -490,7 +510,10 @@ router.put('/:id', protect, [
       });
     }
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!user) {
       return res.status(404).json({
@@ -499,14 +522,14 @@ router.put('/:id', protect, [
       });
     }
 
-    // Superadmin profile cannot be edited by non-superadmin
-    if (user.role === 'superadmin' && req.user.role !== 'superadmin') {
+    // developer profile cannot be edited by non-developer
+    if (user.role === 'developer' && req.user.role !== 'developer') {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     // Users can only edit their own profile, admins/receptionist can edit any
     const userId = req.user._id || req.user.id;
-    if (req.user.role !== 'admin' && req.user.role !== 'receptionist' && req.user.role !== 'superadmin' && user._id.toString() !== userId.toString()) {
+    if (req.user.role !== 'admin' && req.user.role !== 'receptionist' && req.user.role !== 'developer' && user._id.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to edit this user'
@@ -526,8 +549,8 @@ router.put('/:id', protect, [
     if (washer_id !== undefined) updateData.washer_id = washer_id || null;
     if (barber_id !== undefined) updateData.barber_id = barber_id || null;
 
-    // Only admins can change role, status, and commission_percentage
-    if (req.user.role === 'admin') {
+    // Only admins or developer can change role, status, and commission_percentage
+    if (req.user.role === 'admin' || req.user.role === 'developer') {
       if (role !== undefined) updateData.role = role;
       if (status !== undefined) updateData.status = status;
       if (commission_percentage !== undefined) {
@@ -575,7 +598,10 @@ router.post('/:id/reset-password', protect, authorize('admin', 'receptionist'), 
       });
     }
 
-    const targetUser = await User.findById(req.params.id);
+    const targetUser = await User.findOne({
+       _id: req.params.id,
+       ...(req.shop_id && { admin_id: req.shop_id })
+    });
 
     if (!targetUser) {
       return res.status(404).json({
@@ -584,8 +610,8 @@ router.post('/:id/reset-password', protect, authorize('admin', 'receptionist'), 
       });
     }
 
-    // Superadmin password cannot be reset from here
-    if (targetUser.role === 'superadmin') {
+    // developer password cannot be reset from here
+    if (targetUser.role === 'developer') {
       return res.status(403).json({
         success: false,
         error: 'This account password cannot be reset from this screen'
@@ -655,7 +681,10 @@ router.delete('/:id', protect, authorize('admin'), [
       });
     }
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!user) {
       return res.status(404).json({
@@ -664,8 +693,8 @@ router.delete('/:id', protect, authorize('admin'), [
       });
     }
 
-    // Superadmin cannot be deleted by anyone (not even themselves via this route)
-    if (user.role === 'superadmin') {
+    // developer cannot be deleted by anyone (not even themselves via this route)
+    if (user.role === 'developer') {
       return res.status(403).json({
         success: false,
         error: 'This account cannot be deleted'
@@ -722,7 +751,10 @@ router.get('/:id/stats', protect, [
       });
     }
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!user) {
       return res.status(404).json({

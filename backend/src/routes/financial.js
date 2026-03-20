@@ -37,7 +37,8 @@ router.get('/summary', protect, authorize('admin'), [
     // Calculate Total Revenue from PAID appointments (real collected revenue)
     const paidAppointments = await Appointment.find({
       payment_status: 'paid',
-      appointment_date: { $gte: startDate, $lte: endDate }
+      appointment_date: { $gte: startDate, $lte: endDate },
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     const totalRevenue = paidAppointments.reduce((sum, apt) => {
@@ -47,7 +48,8 @@ router.get('/summary', protect, authorize('admin'), [
     // Calculate Cost of Goods Sold (COGS) from inventory usage/waste transactions
     const inventoryTransactions = await InventoryTransaction.find({
       transaction_type: { $in: ['usage', 'waste'] },
-      transaction_date: { $gte: startDate, $lte: endDate }
+      transaction_date: { $gte: startDate, $lte: endDate },
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     const costOfGoodsSold = inventoryTransactions.reduce((sum, trans) => {
@@ -60,7 +62,8 @@ router.get('/summary', protect, authorize('admin'), [
 
     // Calculate Operating Expenses
     const operatingExpenses = await OperatingExpense.find({
-      expense_date: { $gte: startDate, $lte: endDate }
+      expense_date: { $gte: startDate, $lte: endDate },
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     const totalOperatingExpenses = operatingExpenses.reduce((sum, exp) => {
@@ -129,18 +132,19 @@ router.get('/expenses', protect, authorize('admin'), [
       }
     }
 
-    if (category) {
-      query.category = new RegExp(category, 'i');
+    let queryFilter = { ...query };
+    if (req.shop_id) {
+       queryFilter.admin_id = req.shop_id;
     }
 
     const skip = (page - 1) * limit;
-    const expenses = await OperatingExpense.find(query)
+    const expenses = await OperatingExpense.find(queryFilter)
       .populate('created_by', 'first_name last_name')
       .sort({ expense_date: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip));
 
-    const total = await OperatingExpense.countDocuments(query);
+    const total = await OperatingExpense.countDocuments(queryFilter);
 
     res.status(200).json({
       success: true,
@@ -209,7 +213,8 @@ router.post('/expenses', protect, authorize('admin'), [
       expense_date: expense_date ? new Date(expense_date) : new Date(),
       payment_method: payment_method || 'cash',
       notes: notes || '',
-      created_by: req.user._id || req.user.id
+      created_by: req.user._id || req.user.id,
+      admin_id: req.shop_id
     });
 
     await expense.populate('created_by', 'first_name last_name');
@@ -264,7 +269,10 @@ router.put('/expenses/:id', protect, authorize('admin'), [
       });
     }
 
-    const expense = await OperatingExpense.findById(req.params.id);
+    const expense = await OperatingExpense.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!expense) {
       return res.status(404).json({
@@ -305,7 +313,10 @@ router.put('/expenses/:id', protect, authorize('admin'), [
 // @access  Private (Admin)
 router.delete('/expenses/:id', protect, authorize('admin'), async (req, res, next) => {
   try {
-    const expense = await OperatingExpense.findById(req.params.id);
+    const expense = await OperatingExpense.findOne({
+      _id: req.params.id,
+      ...(req.shop_id && { admin_id: req.shop_id })
+    });
     
     if (!expense) {
       return res.status(404).json({

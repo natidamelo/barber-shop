@@ -6,6 +6,11 @@ const staffScheduleSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Staff ID is required']
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
+  },
   date: {
     type: Date,
     required: [true, 'Date is required']

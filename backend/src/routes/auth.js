@@ -65,8 +65,8 @@ router.post('/register', [
       email,
       password,
       phone,
-      role: ['admin', 'barber', 'customer', 'receptionist'].includes(role) ? role : 'customer', // superadmin only via seed/direct DB
-      status: 'inactive' // Must be activated by an admin
+      role: ['admin', 'barber', 'customer', 'receptionist'].includes(role) ? role : 'customer', // developer only via seed/direct DB
+      status: 'inactive' // Must be activated by an admin or developer
     });
 
     res.status(201).json({
@@ -147,12 +147,12 @@ router.post('/login', [
 
     // ── License check ─────────────────────────────────────────────────────────
     // License model: 1 license = 1 shop.
-    //   • superadmin  → no license needed (developer/seller)
+    //   • developer   → no license needed (platform developer)
     //   • admin       → must provide license_key + computer_id on login
     //   • all others  → license is looked up from their shop admin automatically
     let licenseInfo = null;
 
-    if (user.role !== 'superadmin') {
+    if (user.role !== 'developer') {
       const { computer_id, license_key: providedLicenseKey } = req.body;
       let licenseKey = providedLicenseKey;
 

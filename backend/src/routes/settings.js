@@ -10,7 +10,15 @@ const router = express.Router();
 // @access  Public (for business name, etc.)
 router.get('/', async (req, res, next) => {
   try {
-    const settings = await Settings.find({});
+    const { shop_id } = req.query;
+    let query = {};
+    if (shop_id) {
+       query.admin_id = shop_id;
+    } else if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+
+    const settings = await Settings.find(query);
     
     // Convert to object format
     const settingsObj = {};
@@ -43,7 +51,15 @@ router.get('/:key', [
       });
     }
 
-    const setting = await Settings.findOne({ key: req.params.key });
+    const { shop_id } = req.query;
+    let query = { key: req.params.key };
+    if (shop_id) {
+       query.admin_id = shop_id;
+    } else if (req.shop_id) {
+       query.admin_id = req.shop_id;
+    }
+
+    const setting = await Settings.findOne(query);
 
     if (!setting) {
       return res.status(404).json({
@@ -92,10 +108,14 @@ router.put('/:key', protect, authorize('admin'), [
     const { value, description } = req.body;
 
     const setting = await Settings.findOneAndUpdate(
-      { key: req.params.key },
+      { 
+        key: req.params.key,
+        admin_id: req.shop_id 
+      },
       { 
         value,
-        ...(description !== undefined && { description })
+        ...(description !== undefined && { description }),
+        admin_id: req.shop_id
       },
       { upsert: true, new: true, runValidators: true }
     );

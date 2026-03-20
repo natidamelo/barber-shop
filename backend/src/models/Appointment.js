@@ -16,6 +16,11 @@ const appointmentSchema = new mongoose.Schema({
     ref: 'Service',
     required: [true, 'Service ID is required']
   },
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Admin ID is required']
+  },
   appointment_date: {
     type: Date,
     required: [true, 'Appointment date is required'],
@@ -144,7 +149,7 @@ appointmentSchema.pre(/^find/, function(next) {
 });
 
 // Static method to find appointments by date range
-appointmentSchema.statics.findByDateRange = function(startDate, endDate, barberId = null) {
+appointmentSchema.statics.findByDateRange = function(startDate, endDate, barberId = null, adminId = null) {
   const query = {
     appointment_date: {
       $gte: startDate,
@@ -155,12 +160,16 @@ appointmentSchema.statics.findByDateRange = function(startDate, endDate, barberI
   if (barberId) {
     query.barber_id = barberId;
   }
+
+  if (adminId) {
+    query.admin_id = adminId;
+  }
   
   return this.find(query).sort({ appointment_date: 1 });
 };
 
 // Static method to check for conflicts
-appointmentSchema.statics.checkConflict = function(barberId, startTime, endTime, excludeId = null) {
+appointmentSchema.statics.checkConflict = function(barberId, startTime, endTime, excludeId = null, adminId = null) {
   const query = {
     barber_id: barberId,
     status: { $in: ['scheduled', 'confirmed', 'in_progress'] },
@@ -174,6 +183,10 @@ appointmentSchema.statics.checkConflict = function(barberId, startTime, endTime,
   
   if (excludeId) {
     query._id = { $ne: excludeId };
+  }
+
+  if (adminId) {
+    query.admin_id = adminId;
   }
   
   return this.findOne(query);

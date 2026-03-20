@@ -27,6 +27,11 @@ router.get('/', [
     const { category, active, sort = 'sort_order', order = 'asc', page = 1, limit = 10 } = req.query;
     
     let query = {};
+    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
+    if (req.shop_id) {
+      query.admin_id = req.shop_id;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Apply filters
     if (category) {
@@ -36,8 +41,12 @@ router.get('/', [
     if (active !== undefined) {
       query.is_active = active === 'true';
     } else {
-      // Default to active services only for public access
-      query.is_active = true;
+      // Default to active services only for public access (unless admin/developer)
+      if (req.user && (req.user.role === 'admin' || req.user.role === 'developer')) {
+         // show both active and inactive services to admin/developer
+      } else {
+        query.is_active = true;
+      }
     }
 
     // Build sort object
@@ -191,7 +200,8 @@ router.post('/', protect, authorize('admin', 'barber'), [
       requirements: requirements || {},
       is_active,
       sort_order,
-      shop_cut: typeof shop_cut === 'number' ? shop_cut : parseFloat(shop_cut) || 0
+      shop_cut: typeof shop_cut === 'number' ? shop_cut : parseFloat(shop_cut) || 0,
+      admin_id: req.shop_id || req.user._id // Ensure it's linked to the shop
     });
 
     res.status(201).json({
@@ -426,7 +436,8 @@ router.get('/categories', async (req, res, next) => {
   try {
     const categories = await Service.distinct('category', {
       category: { $ne: null, $ne: '' },
-      is_active: true
+      is_active: true,
+      ...(req.shop_id && { admin_id: req.shop_id })
     });
 
     const categoryList = categories.filter(cat => cat && cat.trim() !== '');
