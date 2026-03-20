@@ -86,37 +86,47 @@ router.get('/', protect, authorize('admin', 'receptionist', 'developer'), [
     
     let query = {};
 
-    // ── Multi-Tenancy Filter ─────────────────────────────────────────────────
-    if (req.shop_id) {
-       // An admin/shop owner should see themselves AND their staff
-       query.$or = [
-         { admin_id: req.shop_id },
-         { _id: req.shop_id }
-       ];
-    }
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Base Isolation Filters ──────────────────────────────────────────────
+    const andFilters = [];
 
     // developer accounts are never visible to non-developer users
     if (req.user.role !== 'developer') {
-      query.role = { $ne: 'developer' };
+      andFilters.push({ role: { $ne: 'developer' } });
     }
 
-    // Apply filters
+    // Tenancy Filter
+    if (req.shop_id) {
+       // An admin/shop owner should see themselves AND their staff
+       andFilters.push({
+         $or: [
+           { admin_id: req.shop_id },
+           { _id: req.shop_id }
+         ]
+       });
+    }
+
+    // ── User-provided Filters ────────────────────────────────────────────────
     if (role) {
-      query.role = role;
+      andFilters.push({ role });
     }
 
     if (status) {
-      query.status = status;
+      andFilters.push({ status });
     }
 
     if (search) {
-      query.$or = [
-        { first_name: new RegExp(search, 'i') },
-        { last_name: new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') }
-      ];
+      andFilters.push({
+        $or: [
+          { first_name: new RegExp(search, 'i') },
+          { last_name: new RegExp(search, 'i') },
+          { email: new RegExp(search, 'i') }
+        ]
+      });
     }
+
+    // Final Query
+    const query = andFilters.length > 0 ? { $and: andFilters } : {};
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Apply pagination
     const skip = (page - 1) * limit;
