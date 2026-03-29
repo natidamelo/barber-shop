@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut, Settings, User } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Bell, LogOut, Settings, User, Menu, X } from 'lucide-react'
 import { authService } from '../../services/authService'
 import toast from 'react-hot-toast'
 
-const DashboardHeader = () => {
+const DashboardHeader = ({ onMenuClick }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [user, setUser] = useState(() => authService.getStoredUser())
 
   useEffect(() => {
@@ -24,11 +25,38 @@ const DashboardHeader = () => {
     }
   }
 
+  const getPageTitle = () => {
+    const path = location.pathname
+    const titles = {
+      '/dashboard': 'Dashboard Overview',
+      '/dashboard/appointments': 'Manage Appointments',
+      '/dashboard/profile': 'User Profile',
+      '/dashboard/admin': 'Administrator Control', 
+      '/dashboard/admin/users': 'User Management',
+      '/dashboard/admin/services': 'Service Management',
+      '/dashboard/admin/inventory': 'Inventory Tracking',
+      '/dashboard/admin/reports': 'Business Analytics',
+      '/dashboard/schedule': 'My Work Schedule',
+      '/dashboard/reviews': 'Customer Reviews'
+    }
+    return titles[path] || 'Dashboard'
+  }
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="flex items-center justify-between h-16 px-6">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">
+    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+        <div className="flex items-center">
+          {/* Mobile menu toggle */}
+          <button 
+            type="button"
+            className="p-2 mr-2 text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onClick={onMenuClick}
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          
+          <h1 className="text-lg font-bold text-gray-900 truncate">
             {getPageTitle()} 
           </h1>
         </div>
@@ -74,23 +102,6 @@ const DashboardHeader = () => {
       </div>
     </header>
   )
-}
-
-const getPageTitle = () => {
-  const path = window.location.pathname
-  const titles = {
-    '/dashboard': 'Dashboard',
-    '/dashboard/appointments': 'Appointments',
-    '/dashboard/profile': 'Profile',
-    '/dashboard/admin': 'Admin Panel', 
-    '/dashboard/admin/users': 'User Management',
-    '/dashboard/admin/services': 'Service Management',
-    '/dashboard/admin/inventory': 'Inventory Management',
-    '/dashboard/admin/reports': 'Reports',
-    '/dashboard/schedule': 'My Schedule',
-    '/dashboard/reviews': 'Reviews'
-  }
-  return titles[path] || 'Dashboard'
 }
 
 export default DashboardHeader
