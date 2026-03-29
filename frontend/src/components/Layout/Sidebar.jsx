@@ -358,30 +358,30 @@ const Sidebar = ({ isOpen, onClose }) => {
               </div>
             )}
           </nav>
-
-          {/* Modals remain same */}
-          {showAddCustomer && (
-            <CreateCustomerModal
-              onCustomerCreated={() => setShowAddCustomer(false)}
-              onClose={() => setShowAddCustomer(false)}
-            />
-          )}
-
-          {showWalkIn && (
-            <WalkInAppointmentModal
-              onAppointmentCreated={() => setShowWalkIn(false)}
-              onClose={() => setShowWalkIn(false)}
-            />
-          )}
-
-          {showBookAppointment && (
-            <CreateAppointmentModal
-              onAppointmentCreated={() => setShowBookAppointment(false)}
-              onClose={() => setShowBookAppointment(false)}
-            />
-          )}
         </div>
       </div>
+
+      {/* Modals are placed here (outside the transform container) to ensure they display full size */}
+      {showAddCustomer && (
+        <CreateCustomerModal
+          onCustomerCreated={() => setShowAddCustomer(false)}
+          onClose={() => setShowAddCustomer(false)}
+        />
+      )}
+
+      {showWalkIn && (
+        <WalkInAppointmentModal
+          onAppointmentCreated={() => setShowWalkIn(false)}
+          onClose={() => setShowWalkIn(false)}
+        />
+      )}
+
+      {showBookAppointment && (
+        <CreateAppointmentModal
+          onAppointmentCreated={() => setShowBookAppointment(false)}
+          onClose={() => setShowBookAppointment(false)}
+        />
+      )}
     </>
   )
 }
