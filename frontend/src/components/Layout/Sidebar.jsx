@@ -140,11 +140,11 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         {/* Header */}
         <div className="flex items-center h-16 px-4 border-b border-gray-200 justify-between">
-          <Link to="/dashboard" className="flex items-center space-x-2 overflow-hidden">
+          <Link to="/dashboard" className="flex items-center space-x-2 min-w-0">
             <div className="flex-shrink-0 w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center">
               <Scissors className="h-6 w-6 text-primary-600" />
             </div>
-            <span className={`text-lg font-bold text-gray-900 truncate transition-all duration-300 ${isCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+            <span className={`text-lg font-bold text-gray-900 truncate transition-all duration-300 ${isCollapsed ? 'lg:w-0 lg:opacity-0' : 'opacity-100 flex-1'}`}>
               {businessName || 'BarberShop'}
             </span>
           </Link>
@@ -166,7 +166,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
         </div>
         
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto no-scrollbar">
+        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
           {/* User Profile Section */}
           <div className={`px-4 mb-6 flex items-center transition-all duration-300 ${isCollapsed ? 'lg:px-5 lg:justify-center' : ''}`}>
             <div className="flex-shrink-0 relative group">
