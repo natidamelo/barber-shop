@@ -50,7 +50,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const getNavigation = () => {
     const roleLower = user?.role?.toLowerCase() || '';
-    const isAdminOrDev = roleLower.includes('admin') || roleLower.includes('dev') || user?.first_name === 'Admin';
+    const isDeveloperMode = roleLower === 'developer' || roleLower === 'superadmin';
+    const isAdmin = roleLower === 'admin' || user?.first_name === 'Admin';
     
     // Washer: no dashboard access — only Profile
     if (roleLower === 'washer') {
@@ -65,7 +66,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       { name: 'Profile', href: '/dashboard/profile', icon: User },
     ]
 
-    if (isAdminOrDev) {
+    // Only Developer/Superadmin sees license management
+    if (isDeveloperMode) {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
@@ -79,7 +81,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       ]
     }
 
-    if (roleLower === 'admin') {
+    if (isAdmin) {
       return [
         ...baseNavigation,
         { name: 'Admin Panel', href: '/dashboard/admin', icon: Settings },
