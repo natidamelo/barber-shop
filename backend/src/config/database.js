@@ -9,7 +9,9 @@ const connectDB = async () => {
     console.log('✅ MongoDB connection established successfully');
     console.log(`📊 Connected to: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
+    const hostMatch = process.env.MONGODB_URI ? process.env.MONGODB_URI.match(/@([^/\?]+)/) : null;
+    const targetHost = hostMatch ? hostMatch[1] : 'unknown host';
+    console.error(`❌ MongoDB connection failed for [${targetHost}]:`, error.message);
     process.exit(1);
   }
 };
