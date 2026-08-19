@@ -62,6 +62,12 @@ router.get('/:key', [
     const setting = await Settings.findOne(query);
 
     if (!setting) {
+      if (req.params.key === 'business_name') {
+        return res.status(200).json({
+          success: true,
+          data: { key: 'business_name', value: 'Barber Shop Management', description: 'Business name' }
+        });
+      }
       return res.status(404).json({
         success: false,
         error: 'Setting not found'
@@ -77,6 +83,12 @@ router.get('/:key', [
       }
     });
   } catch (error) {
+    if (req.params.key === 'business_name') {
+      return res.status(200).json({
+        success: true,
+        data: { key: 'business_name', value: 'Barber Shop Management', description: 'Business name' }
+      });
+    }
     next(error);
   }
 });
