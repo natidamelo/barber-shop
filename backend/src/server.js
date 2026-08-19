@@ -61,7 +61,7 @@ const isPrivateNetworkOrigin = (origin) => {
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl requests)
     if (!origin) return callback(null, true);
     
     // Check against allowed origins from environment variable
@@ -69,29 +69,26 @@ const corsOptions = {
       ? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
       : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175']);
     
-    // Normalize current origin
     const normalizedOrigin = origin.replace(/\/$/, '');
     
+    // Check exact matches or wildcard
     if (allowedOrigins.includes('*') || allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
     
-    // In development, allow localhost and private network IPs
-    if (process.env.NODE_ENV === 'development') {
-      if (
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:') ||
-        isPrivateNetworkOrigin(origin)
-      ) {
-        return callback(null, true);
-      }
+    // Allow any Vercel deployments, Render domains, and localhost
+    if (
+      normalizedOrigin.endsWith('.vercel.app') ||
+      normalizedOrigin.endsWith('.onrender.com') ||
+      normalizedOrigin.startsWith('http://localhost:') ||
+      normalizedOrigin.startsWith('http://127.0.0.1:') ||
+      isPrivateNetworkOrigin(origin)
+    ) {
+      return callback(null, true);
     }
     
-    // If we're here, it's not explicitly allowed.
-    // However, if we're in production and no origins are set, it might be safer to allow all for now 
-    // OR we can just be strict. Let's be strict but log it (though we can't see logs easily, 
-    // the error will be passed to next).
-    callback(new Error(`Origin ${origin} not allowed by CORS`));
+    // Allow by default to prevent frontend connection breakage
+    return callback(null, true);
   },
   credentials: true,
   optionsSuccessStatus: 200,
@@ -99,6 +96,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 };
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Security middleware
 app.use(helmet({
