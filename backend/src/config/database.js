@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is missing or undefined in environment settings.');
+    }
     const conn = await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ MongoDB connection established successfully');
     console.log(`📊 Connected to: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
