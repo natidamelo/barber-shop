@@ -174,27 +174,30 @@ const initializeUser = require('./scripts/initUser');
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDB();
-    
-    // Initialize default data (settings, developer if none exist)
-    await initializeSettings();
-    await initializeUser();
-    
+    // Start listening on port immediately so Render port scan passes
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+      console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
+    });
+
     // Developer Access Logs
-    // Logs all requests made by the developer account for audit purposes
     app.use((req, res, next) => {
       if (req.user && req.user.role === 'developer') {
         console.log(`[Developer Action] ${req.method} ${req.originalUrl} by ${req.user.email}`);
       }
       next();
     });
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-      console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
+
+    // Connect to database and initialize data in background
+    connectDB().then(async () => {
+      try {
+        await initializeSettings();
+        await initializeUser();
+      } catch (initErr) {
+        console.error('⚠️  Failed to initialize default data:', initErr.message);
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);
