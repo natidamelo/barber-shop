@@ -1,11 +1,19 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Fix for Node.js 17+ / Render DNS resolution issues with MongoDB Atlas SRV records
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
       throw new Error('MONGODB_URI environment variable is missing or undefined in environment settings.');
     }
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000
+    });
     console.log('✅ MongoDB connection established successfully');
     console.log(`📊 Connected to: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
   } catch (error) {
