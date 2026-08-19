@@ -1,14 +1,14 @@
 const express = require('express');
 const { body, validationResult, param, query } = require('express-validator');
 const { Service, Review } = require('../models');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
 // @desc    Get all services
 // @route   GET /api/services
 // @access  Public
-router.get('/', [
+router.get('/', optionalAuth, [
   query('category').optional().isString().withMessage('Category must be a string'),
   query('active').optional().isBoolean().withMessage('Active must be a boolean'),
   query('sort').optional().isIn(['name', 'price', 'duration', 'created_at']).withMessage('Invalid sort field'),
@@ -181,9 +181,11 @@ router.post('/', protect, authorize('admin', 'barber'), [
 
     const { name, description, price, duration, category, image_url, requirements, is_active = true, sort_order = 0, shop_cut = 0 } = req.body;
 
-    // Check if service name already exists
-    const existingService = await Service.findOne({ name });
+    // Check if service name already exists for this shop
+    const admin_id = req.shop_id || req.user._id;
+    const existingService = await Service.findOne({ name, admin_id });
     if (existingService) {
+      console.error('Service name already exists error:', { name, admin_id });
       return res.status(400).json({
         success: false,
         error: 'Service with this name already exists'
@@ -281,11 +283,9 @@ router.put('/:id', protect, authorize('admin', 'barber'), [
     const { name, description, price, duration, category, image_url, requirements, is_active, sort_order, shop_cut } = req.body;
 
     if (name) {
-      // Check if another service has this name
-      const existingService = await Service.findOne({ 
-        name, 
-        _id: { $ne: req.params.id } 
-      });
+      // Check if new name already exists for this shop
+      const admin_id = req.shop_id || req.user._id;
+      const existingService = await Service.findOne({ name: req.body.name, admin_id, _id: { $ne: req.params.id } });
       
       if (existingService) {
         return res.status(400).json({
@@ -432,7 +432,7 @@ router.delete('/:id', protect, authorize('admin'), [
 // @desc    Get service categories
 // @route   GET /api/services/categories
 // @access  Public
-router.get('/categories', async (req, res, next) => {
+router.get('/categories', optionalAuth, async (req, res, next) => {
   try {
     const categories = await Service.distinct('category', {
       category: { $ne: null, $ne: '' },

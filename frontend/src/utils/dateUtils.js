@@ -110,3 +110,41 @@ export const formatTimeOnly = (dateString) => {
     })
   }
 }
+
+/**
+ * Convert a 24-hour time string (e.g., '14:30') or a date string/object to Ethiopian Local Time string
+ */
+export const toEthiopianLocalTime = (timeInput) => {
+  if (!timeInput) return 'N/A'
+  
+  let h, mStr;
+  
+  // If it's a 24h string like '14:30'
+  if (typeof timeInput === 'string' && timeInput.includes(':') && timeInput.length <= 8) {
+    const parts = timeInput.split(':');
+    h = parseInt(parts[0], 10);
+    mStr = parts[1].substring(0, 2);
+  } else {
+    // If it's a date object or full ISO string
+    const date = new Date(timeInput);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    // Get hours in Addis Ababa timezone
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Africa/Addis_Ababa'
+    });
+    const formatted = timeFormatter.format(date);
+    const parts = formatted.split(':');
+    h = parseInt(parts[0], 10);
+    if (h === 24) h = 0; // handle 24:00
+    mStr = parts[1].substring(0, 2);
+  }
+  
+  let ethH = h >= 6 ? h - 6 : h + 6;
+  if (ethH === 0) ethH = 12;
+  if (ethH > 12) ethH -= 12;
+  
+  return `${ethH}:${mStr} LT`;
+}

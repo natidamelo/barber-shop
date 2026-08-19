@@ -8,8 +8,6 @@ import {
   DollarSign, 
   TrendingUp,
   AlertCircle,
-  Settings,
-  BarChart3,
   UserPlus
 } from 'lucide-react'
 import StatsCard from '../../components/UI/StatsCard'

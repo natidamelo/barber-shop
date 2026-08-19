@@ -9,13 +9,15 @@ import {
   DollarSign, 
   TrendingUp,
   AlertTriangle,
-  Clock
+  Clock,
+  CheckCircle
 } from 'lucide-react'
 import { useUsers } from '../../hooks/useUsers'
 import { useServices } from '../../hooks/useServices'
 import { useAppointments, useAppointmentsByDateRange } from '../../hooks/useAppointments'
 import { useLowStockItems } from '../../hooks/useInventory'
 import { reviewService } from '../../services/reviewService'
+import { getStoredLicenseInfo } from '../../services/licenseService'
 
 // Format date to "X min ago" / "X hours ago" / "X days ago"
 function formatTimeAgo(dateStr) {
@@ -77,6 +79,8 @@ const AdminDashboard = () => {
   const completedMonthAppointments = monthAppointments.filter(apt => 
     apt.status === 'completed' && apt.payment_status === 'paid'
   )
+
+  const licenseInfo = getStoredLicenseInfo()
 
   const stats = {
     totalCustomers: users.filter(u => u.role === 'customer').length,
@@ -187,6 +191,35 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* License Banner */}
+      {licenseInfo && (
+        <div className={`rounded-lg p-4 border ${
+          licenseInfo.days_remaining <= 30 
+            ? 'bg-amber-50 border-amber-200 text-amber-800' 
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              {licenseInfo.days_remaining <= 30 ? (
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              ) : (
+                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              )}
+              <div>
+                <p className="font-medium">
+                  Active License <span className="font-mono bg-white px-2 py-0.5 text-xs rounded border border-gray-200 ml-2 text-gray-700">{licenseInfo.license_key}</span>
+                </p>
+                <p className="text-sm mt-0.5 opacity-90">
+                  {licenseInfo.days_remaining <= 30 
+                    ? `Expires in ${licenseInfo.days_remaining} days. Please renew soon.`
+                    : `${licenseInfo.days_remaining} days remaining.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Statistics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard

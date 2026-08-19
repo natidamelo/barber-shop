@@ -28,6 +28,7 @@ import { appointmentService } from '../../services/appointmentService'
 import { reviewService } from '../../services/reviewService'
 import { useQuery, useQueryClient } from 'react-query'
 import toast from 'react-hot-toast'
+import { toEthiopianLocalTime } from '../../utils/dateUtils'
 import LeaveReviewModal from '../../components/UI/LeaveReviewModal'
 import TipBarberModal from '../../components/UI/TipBarberModal'
 import CreateAppointmentModal from '../../components/UI/CreateAppointmentModal'
@@ -509,42 +510,42 @@ const AppointmentsPage = () => {
       </div>
 
       {/* Appointments Table */}
-      <div className="card">
+      <div className="card bg-transparent shadow-none border-none">
         <div className="card-body p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto pb-4">
+            <table className="min-w-full border-separate border-spacing-y-3">
+              <thead className="bg-transparent">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider pl-8">
                     Date & Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Barber
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Washer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Service
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider pr-8">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-transparent">
                 {filteredAppointments.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center">
+                  <tr className="bg-white rounded-xl shadow-sm">
+                    <td colSpan="8" className="px-6 py-12 text-center rounded-xl">
                       <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
                       <p className="text-gray-500 mb-4">
@@ -557,10 +558,23 @@ const AppointmentsPage = () => {
                   </tr>
                 ) : (
                   paginatedAppointments.map((appointment) => (
-                    <tr key={appointment._id || appointment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
+                    <tr key={appointment._id || appointment.id} className="bg-white hover:bg-primary-50/40 hover:shadow-md transition-all duration-200 shadow-sm group">
+                      <td className="px-6 py-4 whitespace-nowrap first:rounded-l-xl last:rounded-r-xl border-y border-l border-gray-100 group-hover:border-primary-100 pl-8">
+                        <div className="flex flex-col">
+                          <div className="text-sm font-bold text-primary-900 mb-1">
+                            {toEthiopianLocalTime(appointment.appointment_date)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs font-medium text-gray-500 bg-gray-100 rounded-md px-2 py-0.5 inline-block border border-gray-200 group-hover:bg-white group-hover:border-primary-200">
+                              {new Date(appointment.appointment_date).toLocaleTimeString('en-US', { 
+                                hour: 'numeric', 
+                                minute: '2-digit', 
+                                hour12: true,
+                                timeZone: 'Africa/Addis_Ababa'
+                              })}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1 font-medium">
                             {new Date(appointment.appointment_date).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'short',
@@ -568,17 +582,9 @@ const AppointmentsPage = () => {
                               timeZone: 'Africa/Addis_Ababa'
                             })}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {new Date(appointment.appointment_date).toLocaleTimeString('en-US', { 
-                              hour: 'numeric', 
-                              minute: '2-digit', 
-                              hour12: true,
-                              timeZone: 'Africa/Addis_Ababa'
-                            })}
-                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">
@@ -595,41 +601,47 @@ const AppointmentsPage = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
                         <div className="text-sm font-medium text-gray-900">
                           {appointment.barber_id?.first_name || 'N/A'} {appointment.barber_id?.last_name || ''}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
                         {(() => {
                           const customer = getCustomerForAppointment(appointment)
-                          if (!customer?.wash_after_cut) return <span className="text-sm text-gray-400">—</span>
+                          if (!customer?.wash_after_cut) return <span className="text-sm text-gray-400 font-medium bg-gray-50 px-2 py-0.5 rounded border border-gray-100">—</span>
                           const name = getWasherName(customer.washer_id)
                           return (
-                            <div className="text-sm text-gray-900 flex items-center space-x-1">
-                              <Droplets className="h-4 w-4 text-sky-500 flex-shrink-0" />
+                            <div className="text-sm font-medium text-gray-900 flex items-center space-x-1.5 bg-sky-50 text-sky-700 px-2.5 py-1 rounded-md border border-sky-100 w-fit">
+                              <Droplets className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" />
                               <span>{name || 'Yes'}</span>
                             </div>
                           )
                         })()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{appointment.service_id?.name || 'N/A'}</div>
                           <div className="text-sm text-gray-500">{appointment.service_id?.duration || 'N/A'} min</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                          {appointment.status === 'completed' && <Check className="w-3 h-3 mr-1" />}
-                          {appointment.status === 'cancelled' && <X className="w-3 h-3 mr-1" />}
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                          appointment.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                          appointment.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 animate-pulse' :
+                          appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                          appointment.status === 'cancelled' ? 'bg-red-100 text-red-800 border border-red-200' :
+                          'bg-gray-100 text-gray-800 border border-gray-200'
+                        }`}>
                           {appointment.status.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(appointment.price || 0).toFixed(2)} ETB
+                      <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
+                        <div className="text-sm font-bold text-gray-900">
+                          {(appointment.price || 0).toFixed(2)} ETB
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium border-y border-r border-gray-100 group-hover:border-primary-100 first:rounded-l-xl last:rounded-r-xl pr-8">
                         <div className="flex items-center justify-end space-x-2">
                           {canStartAppointment(appointment) && (
                             <button

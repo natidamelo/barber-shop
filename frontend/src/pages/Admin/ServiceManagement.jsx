@@ -76,6 +76,7 @@ const ServiceManagement = () => {
 
   const handleEditService = (service) => {
     setSelectedService(service)
+    setShowDetailsModal(false)
     setShowEditModal(true)
   }
 
@@ -132,7 +133,7 @@ const ServiceManagement = () => {
           <div className="p-6 text-center">
             <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
             <p className="text-2xl font-bold text-gray-900">
-              {Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length)} ETB
+              {services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length) : 0} ETB
             </p>
             <p className="text-sm text-gray-600">Avg. Price</p>
           </div>
@@ -141,7 +142,7 @@ const ServiceManagement = () => {
           <div className="p-6 text-center">
             <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
             <p className="text-2xl font-bold text-gray-900">
-              {Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length)}
+              {services.length > 0 ? Math.round(services.reduce((sum, s) => sum + s.duration, 0) / services.length) : 0}
             </p>
             <p className="text-sm text-gray-600">Avg. Duration (min)</p>
           </div>
@@ -150,7 +151,7 @@ const ServiceManagement = () => {
           <div className="p-6 text-center">
             <Star className="h-8 w-8 text-purple-600 mx-auto mb-2" />
             <p className="text-2xl font-bold text-gray-900">
-              {(services.reduce((sum, s) => sum + s.average_rating, 0) / services.length).toFixed(1)}
+              {services.length > 0 ? (services.reduce((sum, s) => sum + s.average_rating, 0) / services.length).toFixed(1) : "0.0"}
             </p>
             <p className="text-sm text-gray-600">Avg. Rating</p>
           </div>
@@ -193,83 +194,86 @@ const ServiceManagement = () => {
       </div>
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredServices.map((service) => (
-          <div key={service.id} className="card">
-            <div className="card-body">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">{service.name}</h3>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {service.category}
+          <div key={service.id} className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 pr-2">
+                  <h3 className="text-base font-bold text-gray-900 truncate">{service.name}</h3>
+                  <span className="text-xs font-medium text-primary-600 mt-0.5 block truncate">
+                    {service.category || 'Uncategorized'}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button onClick={() => {}}>
+                <div className="flex items-center space-x-1 shrink-0">
+                  <button onClick={() => {}} title={service.is_active ? "Active" : "Inactive"}>
                     {service.is_active ? (
-                      <ToggleRight className="h-5 w-5 text-green-500" />
+                      <ToggleRight className="h-5 w-5 text-emerald-500" />
                     ) : (
-                      <ToggleLeft className="h-5 w-5 text-gray-400" />
+                      <ToggleLeft className="h-5 w-5 text-gray-300" />
                     )}
                   </button>
-                  <button className="text-gray-400 hover:text-gray-600">
+                  <button className="p-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-50">
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </div>
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">{service.description}</p>
+              {service.description && (
+                <p className="text-xs text-gray-500 line-clamp-2 mb-3">{service.description}</p>
+              )}
 
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-green-600">{service.price} ETB</p>
-                  <p className="text-xs text-gray-500">Price</p>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 bg-emerald-50 text-emerald-600 rounded">
+                    <DollarSign className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-gray-900 leading-none">{service.price} ETB</span>
+                  </div>
                 </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-red-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-red-600">{service.shop_cut || 0} ETB</p>
-                  <p className="text-xs text-gray-500">Shop Cut</p>
+                
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 bg-amber-50 text-amber-600 rounded">
+                    <DollarSign className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-gray-900 leading-none">{service.shop_cut || 0} ETB</span>
+                  </div>
                 </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <Clock className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-blue-600">{service.duration}m</p>
-                  <p className="text-xs text-gray-500">Duration</p>
+
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 bg-blue-50 text-blue-600 rounded">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-gray-900 leading-none">{service.duration}m</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
+                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                  <Star className="h-3.5 w-3.5 text-yellow-400 fill-current" />
+                  <span className="font-medium text-gray-700">{service.average_rating || 'N/A'}</span>
+                  <span>({service.total_reviews || 0})</span>
+                </div>
                 <div className="flex items-center space-x-1">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="text-sm font-medium text-gray-900">
-                    {service.average_rating || 'N/A'}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    ({service.total_reviews || 0} reviews)
-                  </span>
+                  <button 
+                    onClick={() => handleEditService(service)}
+                    className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                    title="Edit Service"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={() => handleViewDetails(service)}
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  service.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {service.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => handleEditService(service)}
-                  className="flex-1 btn btn-sm btn-secondary flex items-center justify-center space-x-1 hover:bg-gray-200"
-                >
-                  <Edit className="h-3 w-3" />
-                  <span>Edit</span>
-                </button>
-                <button 
-                  onClick={() => handleViewDetails(service)}
-                  className="flex-1 btn btn-sm btn-primary flex items-center justify-center space-x-1 hover:bg-primary-700"
-                >
-                  <Eye className="h-3 w-3" />
-                  <span>Details</span>
-                </button>
               </div>
             </div>
           </div>

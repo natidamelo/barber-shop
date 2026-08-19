@@ -97,10 +97,18 @@ const optionalAuth = async (req, res, next) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id)
-          .select('first_name last_name email role status');
+          .select('_id first_name last_name email role status admin_id');
 
         if (user && user.status === 'active') {
           req.user = user;
+          // Set shop_id for multi-tenancy
+          if (user.role === 'admin') {
+            req.shop_id = user._id || user.id;
+          } else if (user.role === 'developer') {
+            req.shop_id = null;
+          } else {
+            req.shop_id = user.admin_id;
+          }
         }
       } catch (error) {
         // Token invalid, but continue without user

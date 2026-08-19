@@ -385,61 +385,24 @@ router.get('/walk-in-availability', protect, async (req, res, next) => {
             start: moment(apt.appointment_date),
             end: moment(apt.end_time)
           }))
+          .filter(apt => apt.end.isAfter(now))
           .sort((a, b) => a.start - b.start);
 
-        // Find gap between appointments or after last appointment
+        let possibleSlot = now.clone();
         for (let i = 0; i < sortedAppointments.length; i++) {
           const apt = sortedAppointments[i];
-          if (now.isBefore(apt.start)) {
-            const gapDuration = apt.start.diff(now, 'minutes');
-            if (gapDuration >= serviceDuration) {
-              nextAvailableSlot = now.clone();
-              availableNow = true;
-              break;
+          // Check if there is a gap between possibleSlot and this appointment
+          if (possibleSlot.isBefore(apt.start)) {
+            if (apt.start.diff(possibleSlot, 'minutes') >= serviceDuration) {
+              break; // Found a valid slot!
             }
           }
-          
-          // Check if we can fit after this appointment
-          if (now.isAfter(apt.end) || now.isSame(apt.end)) {
-            if (i === sortedAppointments.length - 1) {
-              // This is the last appointment, available after it ends
-              nextAvailableSlot = apt.end.clone();
-              availableNow = true;
-              break;
-            } else {
-              // Check gap to next appointment
-              const nextApt = sortedAppointments[i + 1];
-              const gapDuration = nextApt.start.diff(apt.end, 'minutes');
-              if (gapDuration >= serviceDuration) {
-                nextAvailableSlot = apt.end.clone();
-                availableNow = true;
-                break;
-              }
-            }
+          // If we couldn't fit before this appointment, the next possible slot is after this appointment ends
+          if (possibleSlot.isBefore(apt.end)) {
+            possibleSlot = apt.end.clone();
           }
         }
-
-        // If no appointment found, check if we can fit after the last one
-        if (!availableNow && sortedAppointments.length > 0) {
-          const lastApt = sortedAppointments[sortedAppointments.length - 1];
-          if (now.isAfter(lastApt.end) || now.isSame(lastApt.end)) {
-            nextAvailableSlot = lastApt.end.clone();
-            availableNow = true;
-          }
-        }
-      }
-
-      // If still not available, set to after last appointment or 1 hour from now
-      if (!availableNow) {
-        if (barberAppointments.length > 0) {
-          const lastApt = barberAppointments
-            .map(apt => moment(apt.end_time))
-            .sort((a, b) => b - a)[0];
-          nextAvailableSlot = lastApt.clone();
-        } else {
-          nextAvailableSlot = now.clone();
-          availableNow = true;
-        }
+        nextAvailableSlot = possibleSlot;
       }
 
       // Ensure next available slot is within 1 hour
@@ -1074,6 +1037,23 @@ router.put('/:id', protect, [
           error: 'Customers can only cancel appointments'
         });
       }
+      
+      if (status === 'in_progress') {
+        const barberId = updateData.barber_id || appointment.barber_id;
+        const activeAppointments = await Appointment.find({
+          barber_id: barberId,
+          status: 'in_progress',
+          _id: { $ne: appointment._id }
+        });
+        
+        if (activeAppointments.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Barber is already busy with another appointment. Please complete it first.'
+          });
+        }
+      }
+      
       updateData.status = status;
     }
 
@@ -1330,12 +1310,12 @@ router.get('/available-slots/:barberId/:date', optionalAuth, [
       });
     }
 
-    // Get barber schedule for the day (for now, assume 9 AM to 6 PM)
+    // Get barber schedule for the day (8 AM to 10 PM)
     const workingHours = {
-      start: '09:00',
-      end: '18:00',
-      breakStart: '12:00',
-      breakEnd: '13:00'
+      start: '08:00',
+      end: '22:00',
+      breakStart: '00:00', // No scheduled global break
+      breakEnd: '00:00'
     };
 
     // Get existing appointments for the barber on this date

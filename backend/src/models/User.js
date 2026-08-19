@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'barber', 'customer', 'receptionist', 'washer', 'developer'],
+    enum: ['admin', 'barber', 'customer', 'receptionist', 'washer', 'developer', 'superadmin'],
     default: 'customer'
   },
   status: {
@@ -115,7 +115,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index for better performance
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 
@@ -128,7 +127,7 @@ userSchema.virtual('full_name').get(function() {
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
-  this.password = await bcrypt.hash(this.password, 12);
+  this.password = await bcrypt.hash(this.password, 10); // 10 = OWASP recommended; 12 was ~4× slower
   next();
 });
 

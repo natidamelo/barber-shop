@@ -135,15 +135,8 @@ const LicenseDetailModal = ({ license, onClose, onRenew, onDelete }) => {
   const [renewLoading, setRenewLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const handleRenew = async () => {
-    if (!window.confirm('Renew this license for 1 more year?')) return
-    setRenewLoading(true)
-    try {
-      await onRenew(license._id)
-      onClose()
-    } finally {
-      setRenewLoading(false)
-    }
+  const handleRenew = () => {
+    onRenew(license)
   }
 
   const handleDelete = async () => {
@@ -296,6 +289,82 @@ const LicenseDetailModal = ({ license, onClose, onRenew, onDelete }) => {
   )
 }
 
+const RenewModal = ({ license, onClose, onRenew }) => {
+  const [loading, setLoading] = useState(false)
+  const [expireDate, setExpireDate] = useState('')
+
+  React.useEffect(() => {
+    if (license?.expire_date) {
+      const base = new Date(license.expire_date) < new Date() ? new Date() : new Date(license.expire_date)
+      base.setFullYear(base.getFullYear() + 1)
+      setExpireDate(base.toISOString().split('T')[0])
+    }
+  }, [license])
+
+  const addTime = (months) => {
+    const base = new Date(license.expire_date) < new Date() ? new Date() : new Date(license.expire_date)
+    base.setMonth(base.getMonth() + months)
+    setExpireDate(base.toISOString().split('T')[0])
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await onRenew({ id: license._id, expire_date: expireDate })
+      onClose()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <RefreshCw className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Renew License</h2>
+              <p className="text-xs text-gray-500">{license.customer_name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors text-xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Expiration Date</label>
+            <input 
+              type="date" 
+              className="input w-full border-gray-200" 
+              value={expireDate} 
+              onChange={e => setExpireDate(e.target.value)} 
+              required 
+            />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">Quick Add (from current expiry)</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => addTime(1)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+1 Month</button>
+              <button type="button" onClick={() => addTime(6)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+6 Months</button>
+              <button type="button" onClick={() => addTime(12)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+1 Year</button>
+            </div>
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="btn btn-primary w-full py-2.5"
+          >
+            {loading ? 'Renewing...' : 'Confirm Renewal'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 const LicensesPage = () => {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
@@ -303,6 +372,7 @@ const LicensesPage = () => {
   const [showGenerate, setShowGenerate] = useState(false)
   const [selectedLicense, setSelectedLicense] = useState(null)
   const [newLicense, setNewLicense] = useState(null)
+  const [renewingLicense, setRenewingLicense] = useState(null)
 
   const { data, isLoading } = useQuery(
     ['licenses', search, statusFilter],
@@ -312,7 +382,7 @@ const LicensesPage = () => {
 
   const licenses = data?.data || []
 
-  const renewMutation = useMutation(licenseService.renew, {
+  const renewMutation = useMutation(({id, expire_date}) => licenseService.renew(id, expire_date), {
     onSuccess: () => {
       toast.success('License renewed for 1 year!')
       queryClient.invalidateQueries('licenses')
@@ -499,7 +569,7 @@ const LicensesPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
                         <button
-                          onClick={() => renewMutation.mutate(license._id)}
+                          onClick={() => setRenewingLicense(license)}
                           className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                           title="Renew +1 year"
                         >
@@ -533,8 +603,15 @@ const LicensesPage = () => {
         <LicenseDetailModal
           license={selectedLicense}
           onClose={() => setSelectedLicense(null)}
-          onRenew={(id) => renewMutation.mutateAsync(id)}
+          onRenew={(lic) => setRenewingLicense(lic)}
           onDelete={(id) => deleteMutation.mutateAsync(id)}
+        />
+      )}
+      {renewingLicense && (
+        <RenewModal
+          license={renewingLicense}
+          onClose={() => setRenewingLicense(null)}
+          onRenew={(data) => renewMutation.mutateAsync(data)}
         />
       )}
     </div>

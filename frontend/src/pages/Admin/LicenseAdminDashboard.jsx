@@ -298,8 +298,85 @@ const GenerateModal = ({ onClose, onSuccess }) => {
   )
 }
 
+// ─── Renew License Modal ──────────────────────────────────────────────────────
+const RenewModal = ({ license, onClose, onRenew }) => {
+  const [loading, setLoading] = useState(false)
+  const [expireDate, setExpireDate] = useState('')
+
+  React.useEffect(() => {
+    if (license?.expire_date) {
+      const base = new Date(license.expire_date) < new Date() ? new Date() : new Date(license.expire_date)
+      base.setFullYear(base.getFullYear() + 1)
+      setExpireDate(base.toISOString().split('T')[0])
+    }
+  }, [license])
+
+  const addTime = (months) => {
+    const base = new Date(license.expire_date) < new Date() ? new Date() : new Date(license.expire_date)
+    base.setMonth(base.getMonth() + months)
+    setExpireDate(base.toISOString().split('T')[0])
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await onRenew({ id: license._id, expire_date: expireDate })
+      onClose()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <RefreshCw className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Renew License</h2>
+              <p className="text-xs text-gray-500">{license.customer_name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors text-xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Expiration Date</label>
+            <input 
+              type="date" 
+              className="input w-full border-gray-200" 
+              value={expireDate} 
+              onChange={e => setExpireDate(e.target.value)} 
+              required 
+            />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">Quick Add (from current expiry)</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => addTime(1)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+1 Month</button>
+              <button type="button" onClick={() => addTime(6)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+6 Months</button>
+              <button type="button" onClick={() => addTime(12)} className="btn btn-secondary py-1.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700">+1 Year</button>
+            </div>
+          </div>
+          <div className="flex space-x-3 pt-2 border-t border-gray-100">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700">Cancel</button>
+            <button type="submit" disabled={loading} className="btn btn-primary bg-emerald-600 hover:bg-emerald-700 border-emerald-600 flex-1 flex items-center justify-center space-x-2">
+              {loading ? <div className="loading-spinner w-4 h-4 border-white border-t-transparent" /> : <RefreshCw className="w-4 h-4" />}
+              <span>Confirm</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── License Detail Drawer ────────────────────────────────────────────────────
-const LicenseDrawer = ({ license, onClose, onRenew, onDelete, onSuspend }) => {
+const LicenseDrawer = ({ license, isRegistered, onClose, onRenew, onDelete, onSuspend }) => {
   const [renewLoading, setRenewLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -307,11 +384,8 @@ const LicenseDrawer = ({ license, onClose, onRenew, onDelete, onSuspend }) => {
 
   const copyKey = () => { navigator.clipboard.writeText(license.license_key); toast.success('Copied!') }
 
-  const handleRenew = async () => {
-    if (!window.confirm(`Renew license for ${license.customer_name} for 1 more year?`)) return
-    setRenewLoading(true)
-    try { await onRenew(license._id); onClose() }
-    finally { setRenewLoading(false) }
+  const handleRenew = () => {
+    onRenew(license)
   }
 
   const handleDelete = async () => {
@@ -382,6 +456,17 @@ const LicenseDrawer = ({ license, onClose, onRenew, onDelete, onSuspend }) => {
                 <div className="flex items-center space-x-3 pl-11">
                   <Phone className="w-3.5 h-3.5 text-gray-400" />
                   <span className="text-sm text-gray-600">{license.customer_phone}</span>
+                </div>
+              )}
+              {!isRegistered && (
+                <div className="pl-11 pt-1">
+                  <a 
+                    href={`mailto:${license.customer_email}?subject=BarberPro License & Registration&body=Hello ${license.customer_name},%0D%0A%0D%0AHere is your BarberPro License Key: ${license.license_key}%0D%0A%0D%0APlease register your account here: ${window.location.origin}/register`}
+                    className="inline-flex items-center space-x-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Send Registration Invite</span>
+                  </a>
                 </div>
               )}
             </div>
@@ -460,10 +545,10 @@ const LicenseDrawer = ({ license, onClose, onRenew, onDelete, onSuspend }) => {
 
         {/* Action Buttons */}
         <div className="p-6 border-t border-gray-100 space-y-3">
-          <button onClick={handleRenew} disabled={renewLoading}
-            className="w-full btn btn-primary flex items-center justify-center space-x-2">
-            <RefreshCw className={`w-4 h-4 ${renewLoading ? 'animate-spin' : ''}`} />
-            <span>{renewLoading ? 'Renewing...' : 'Renew +1 Year'}</span>
+          <button onClick={handleRenew}
+            className="w-full btn btn-primary flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 border-emerald-600">
+            <RefreshCw className="w-4 h-4" />
+            <span>Renew License</span>
           </button>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -528,6 +613,7 @@ const LicenseAdminDashboard = () => {
   const [showGenerate, setShowGenerate] = useState(false)
   const [selectedLicense, setSelectedLicense] = useState(null)
   const [newLicense, setNewLicense] = useState(null)
+  const [renewingLicense, setRenewingLicense] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
 
   const { data, isLoading } = useQuery(
@@ -535,6 +621,14 @@ const LicenseAdminDashboard = () => {
     () => licenseService.getAll({ search, status: statusFilter, limit: 200 }),
     { keepPreviousData: true, refetchInterval: 60000 }
   )
+
+  const { data: usersData } = useQuery(
+    ['all-users-check'],
+    () => userService.getUsers({ limit: 1000 }),
+    { keepPreviousData: true }
+  )
+
+  const allUsers = usersData?.data || []
 
   const licenses = data?.data || []
 
@@ -559,10 +653,13 @@ const LicenseAdminDashboard = () => {
     }
   }, [licenses])
 
-  const renewMutation = useMutation(licenseService.renew, {
-    onSuccess: () => { toast.success('License renewed for 1 year!'); queryClient.invalidateQueries('licenses') },
-    onError: (err) => toast.error(err.response?.data?.error || 'Renewal failed')
-  })
+  const renewMutation = useMutation(
+    ({ id, expire_date }) => licenseService.renew(id, expire_date),
+    {
+      onSuccess: () => { toast.success('License renewed successfully!'); queryClient.invalidateQueries('licenses') },
+      onError: (err) => toast.error(err.response?.data?.error || 'Renewal failed')
+    }
+  )
 
   const deleteMutation = useMutation(licenseService.deleteLicense, {
     onSuccess: () => { toast.success('License deleted'); queryClient.invalidateQueries('licenses') },
@@ -783,7 +880,12 @@ const LicenseAdminDashboard = () => {
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-gray-900">{license.customer_name}</p>
-                              <p className="text-xs text-gray-400">{license.customer_email}</p>
+                              <div className="flex items-center space-x-2">
+                                <p className="text-xs text-gray-400">{license.customer_email}</p>
+                                {!allUsers.some(u => u.email === license.customer_email) && (
+                                  <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Unregistered</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -825,8 +927,8 @@ const LicenseAdminDashboard = () => {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end space-x-1" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => renewMutation.mutate(license._id)}
-                              title="Renew +1 year"
+                            <button onClick={() => setRenewingLicense(license)}
+                              title="Renew License"
                               className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
                               <RefreshCw className="w-4 h-4" />
                             </button>
@@ -950,10 +1052,19 @@ const LicenseAdminDashboard = () => {
       {selectedLicense && (
         <LicenseDrawer
           license={selectedLicense}
+          isRegistered={allUsers.some(u => u.email === selectedLicense.customer_email)}
           onClose={() => setSelectedLicense(null)}
-          onRenew={(id) => renewMutation.mutateAsync(id)}
+          onRenew={(lic) => setRenewingLicense(lic)}
           onDelete={(id) => deleteMutation.mutateAsync(id)}
           onSuspend={handleSuspend}
+        />
+      )}
+
+      {renewingLicense && (
+        <RenewModal
+          license={renewingLicense}
+          onClose={() => setRenewingLicense(null)}
+          onRenew={(data) => renewMutation.mutateAsync(data)}
         />
       )}
     </div>

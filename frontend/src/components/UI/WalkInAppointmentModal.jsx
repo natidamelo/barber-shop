@@ -559,7 +559,7 @@ const WalkInAppointmentModal = ({ onAppointmentCreated, onClose, defaultCustomer
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -1061,15 +1061,12 @@ const WalkInAppointmentModal = ({ onAppointmentCreated, onClose, defaultCustomer
                                   <p className="text-sm font-medium text-gray-900">
                                     {barberInfo.barber.first_name} {barberInfo.barber.last_name}
                                   </p>
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                    ~{waitTime} min wait
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    canSelect ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {canSelect ? `Wait: ${waitTime} min (at ${nextAvailableTime})` : 'Not Available'}
                                   </span>
                                 </div>
-                                {nextAvailableTime && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Will be available at: {nextAvailableTime}
-                                  </p>
-                                )}
                               </div>
                             </label>
                           ) : (
@@ -1120,6 +1117,11 @@ const WalkInAppointmentModal = ({ onAppointmentCreated, onClose, defaultCustomer
           )}
 
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+            {formData.barber_id && allBarbers.find(b => b.barber._id === formData.barber_id) && !allBarbers.find(b => b.barber._id === formData.barber_id).available_now && (
+              <div className="flex-1 text-sm text-yellow-800 bg-yellow-50 p-2 rounded-md border border-yellow-200 mr-2 text-left">
+                <strong>Note:</strong> Scheduled for <strong>{new Date(allBarbers.find(b => b.barber._id === formData.barber_id).next_available_slot).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong>
+              </div>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -1131,9 +1133,11 @@ const WalkInAppointmentModal = ({ onAppointmentCreated, onClose, defaultCustomer
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={isSubmitting || !formData.customer_id || formData.service_ids.length === 0 || !formData.barber_id || allBarbers.length === 0}
+              disabled={isSubmitting || showCreateCustomer || !formData.customer_id || formData.service_ids.length === 0 || !formData.barber_id || allBarbers.length === 0}
             >
-              {isSubmitting ? 'Creating...' : `Create Walk-In Appointment${selectedServices.length > 1 ? ` (${selectedServices.length} services)` : ''}`}
+              {isSubmitting ? 'Creating...' : 
+               showCreateCustomer ? 'Save Customer First ☝️' : 
+               `Create Walk-In Appointment${selectedServices.length > 1 ? ` (${selectedServices.length} services)` : ''}`}
             </button>
           </div>
         </form>

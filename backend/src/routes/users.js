@@ -5,7 +5,7 @@ const { body, validationResult, param, query } = require('express-validator');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { User, Review, Appointment, BarberTip } = require('../models');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -158,7 +158,7 @@ router.get('/', protect, authorize('admin', 'receptionist', 'developer'), [
 // @desc    Get all barbers
 // @route   GET /api/users/barbers
 // @access  Public
-router.get('/barbers', [
+router.get('/barbers', optionalAuth, [
   query('shop_id').optional().isMongoId().withMessage('Shop ID must be a valid MongoDB ID')
 ], async (req, res, next) => {
   try {
@@ -222,7 +222,7 @@ router.post('/', protect, authorize('admin', 'receptionist', 'developer'), [
     .withMessage('Password must be at least 6 characters'),
   body('phone')
     .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .matches(/^[\+]?[0-9][\d]{0,15}$/)
     .withMessage('Please enter a valid phone number'),
   body('role')
     .optional()
@@ -316,7 +316,7 @@ router.post('/', protect, authorize('admin', 'receptionist', 'developer'), [
       email_verified_at: new Date(),
       must_change_password: !password,
       // Link this user to the admin who created them (for license lookup on login)
-      admin_id: req.user.role === 'admin' ? (req.user._id || req.user.id) : null
+      admin_id: req.shop_id || (req.user.role === 'admin' ? (req.user._id || req.user.id) : null)
     };
     
     // Add commission_percentage if creating a barber and it's provided
@@ -480,7 +480,7 @@ router.put('/:id', protect, [
     .withMessage('Last name must be between 2 and 100 characters'),
   body('phone')
     .optional({ checkFalsy: true, nullable: true })
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .matches(/^[\+]?[0-9][\d]{0,15}$/)
     .withMessage('Please enter a valid phone number'),
   body('bio')
     .optional({ checkFalsy: true, nullable: true })
@@ -797,7 +797,12 @@ router.get('/:id/stats', protect, [
 
     const user = await User.findOne({
       _id: req.params.id,
-      ...(req.shop_id && { admin_id: req.shop_id })
+      ...(req.shop_id && { 
+        $or: [
+          { admin_id: req.shop_id }, 
+          { _id: req.shop_id }
+        ] 
+      })
     });
     
     if (!user) {

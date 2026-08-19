@@ -34,7 +34,7 @@ router.post('/register', [
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   body('phone')
     .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .matches(/^[\+]?[0-9][\d]{0,15}$/)
     .withMessage('Please enter a valid phone number')
 ], async (req, res, next) => {
   try {
@@ -151,6 +151,7 @@ router.post('/login', [
     //   • admin       → must provide license_key + computer_id on login
     //   • all others  → license is looked up from their shop admin automatically
     let licenseInfo = null;
+    let adminKeyUpdatePromise = Promise.resolve(); // No-op by default
 
     if (user.role !== 'developer') {
       const { computer_id, license_key: providedLicenseKey } = req.body;
@@ -223,18 +224,22 @@ router.post('/login', [
         });
       }
 
-      // Bind computer if not yet bound
-      if (!license.computer_id) {
-        license.computer_id = computer_id;
-        license.status = 'active';
-        license.activated_at = license.activated_at || now;
+      // Bind computer if not yet bound (only write when needed)
+      const needsBinding = !license.computer_id;
+      if (needsBinding) {
+        // First activation — persist the binding
+        await License.findByIdAndUpdate(license._id, {
+          computer_id,
+          status: 'active',
+          activated_at: license.activated_at || now,
+          last_checked_at: now
+        });
       }
-      license.last_checked_at = now;
-      await license.save();
+      // No write needed on routine logins — skip last_checked_at update to save a round-trip
 
       // If admin: store the license key on their account for staff to reuse
       if (user.role === 'admin' && user.license_key !== license.license_key) {
-        await User.findByIdAndUpdate(user._id, { license_key: license.license_key });
+        adminKeyUpdatePromise = User.findByIdAndUpdate(user._id, { license_key: license.license_key });
       }
 
       // Build license info to return to frontend
@@ -248,6 +253,7 @@ router.post('/login', [
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    await adminKeyUpdatePromise;
     sendTokenResponse(user, 200, res, licenseInfo);
   } catch (error) {
     next(error);
@@ -287,7 +293,7 @@ router.put('/profile', protect, [
     .withMessage('Last name must be at least 2 characters'),
   body('phone')
     .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
+    .matches(/^[\+]?[0-9][\d]{0,15}$/)
     .withMessage('Please enter a valid phone number'),
   body('bio')
     .optional()

@@ -61,7 +61,6 @@ const reviewSchema = new mongoose.Schema({
 reviewSchema.index({ customer_id: 1 });
 reviewSchema.index({ barber_id: 1 });
 reviewSchema.index({ service_id: 1 });
-reviewSchema.index({ appointment_id: 1 });
 reviewSchema.index({ rating: 1 });
 reviewSchema.index({ is_published: 1 });
 reviewSchema.index({ barber_id: 1, is_published: 1 });

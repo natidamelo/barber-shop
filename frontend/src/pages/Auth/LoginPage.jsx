@@ -5,91 +5,7 @@ import { getStoredLicenseKey, getComputerId, getStoredLicenseInfo } from '../../
 import { Key, CheckCircle, AlertTriangle, Calendar, Monitor, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-// ── License Expiry Welcome Banner ─────────────────────────────────────────────
-const LicenseWelcomeBanner = ({ info, userName, onContinue }) => {
-  const expireDate = new Date(info.expire_date)
-  const isExpiringSoon = info.days_remaining <= 30
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        {/* Top gradient bar */}
-        <div className={`h-2 w-full ${isExpiringSoon ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`} />
-
-        <div className="p-7 text-center">
-          {/* Icon */}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isExpiringSoon ? 'bg-amber-100' : 'bg-emerald-100'}`}>
-            {isExpiringSoon
-              ? <AlertTriangle className="w-8 h-8 text-amber-600" />
-              : <CheckCircle className="w-8 h-8 text-emerald-600" />
-            }
-          </div>
-
-          <h2 className="text-xl font-bold text-gray-900 mb-1">
-            Welcome back{userName ? `, ${userName}` : ''}!
-          </h2>
-          <p className="text-sm text-gray-500 mb-6">Your license is active and verified.</p>
-
-          {/* License Info Card */}
-          <div className="bg-gray-50 rounded-xl p-4 text-left space-y-3 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Key className="w-4 h-4" />
-                <span className="text-xs font-medium">License Key</span>
-              </div>
-              <span className="font-mono text-xs font-bold text-gray-700 bg-white px-2 py-1 rounded-lg border border-gray-200">
-                {info.license_key}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Calendar className="w-4 h-4" />
-                <span className="text-xs font-medium">Expires On</span>
-              </div>
-              <span className={`text-xs font-bold ${isExpiringSoon ? 'text-amber-600' : 'text-gray-700'}`}>
-                {expireDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Monitor className="w-4 h-4" />
-                <span className="text-xs font-medium">Days Remaining</span>
-              </div>
-              <span className={`text-sm font-bold ${isExpiringSoon ? 'text-amber-600' : 'text-emerald-600'}`}>
-                {info.days_remaining} days
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            <div>
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1">
-                <div
-                  className={`h-full rounded-full transition-all ${isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                  style={{ width: `${Math.max(2, Math.min(100, (info.days_remaining / 365) * 100))}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {isExpiringSoon && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-700 text-left">
-              <strong>Warning:</strong> Your license expires in {info.days_remaining} days. Contact your administrator to renew.
-            </div>
-          )}
-
-          <button
-            onClick={onContinue}
-            className="btn btn-primary w-full"
-          >
-            Continue to Dashboard
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Login Page ────────────────────────────────────────────────────────────────
 const LoginPage = () => {
@@ -97,8 +13,6 @@ const LoginPage = () => {
   const [licenseKey, setLicenseKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [showLicenseField, setShowLicenseField] = useState(false)
-  const [licenseWelcome, setLicenseWelcome] = useState(null)
-  const [loginUserName, setLoginUserName] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -123,15 +37,8 @@ const LoginPage = () => {
       const computer_id = getComputerId()
       const result = await authService.login({ ...formData, license_key: licenseKey, computer_id })
 
-      // If license info returned, show the welcome banner
-      if (result.license_info) {
-        setLoginUserName(result.user?.first_name || '')
-        setLicenseWelcome(result.license_info)
-      } else {
-        // developer — go straight to dashboard
-        toast.success('Login successful!')
-        navigate('/dashboard')
-      }
+      toast.success('Login successful!')
+      navigate('/dashboard')
     } catch (error) {
       const data = error.response?.data
       const message = data?.error || 'Login failed'
@@ -145,11 +52,7 @@ const LoginPage = () => {
     }
   }
 
-  const handleWelcomeContinue = () => {
-    setLicenseWelcome(null)
-    toast.success('Login successful!')
-    navigate('/dashboard')
-  }
+
 
   const storedKey = getStoredLicenseKey()
   const maskedKey = storedKey
@@ -164,15 +67,6 @@ const LoginPage = () => {
 
   return (
     <>
-      {/* License Welcome Banner */}
-      {licenseWelcome && (
-        <LicenseWelcomeBanner
-          info={licenseWelcome}
-          userName={loginUserName}
-          onContinue={handleWelcomeContinue}
-        />
-      )}
-
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>

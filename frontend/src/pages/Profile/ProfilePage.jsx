@@ -46,6 +46,12 @@ const ProfilePage = () => {
     confirmPassword: ''
   })
 
+  React.useEffect(() => {
+    if (user?.must_change_password) {
+      setShowPasswordModal(true)
+    }
+  }, [user?.must_change_password])
+
   const handleChange = (e) => {
     setProfileData({
       ...profileData,
@@ -186,7 +192,7 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
           <p className="text-gray-600 mt-1">Manage your account information and preferences</p>
         </div>
-        {!isEditing ? (
+        {!isEditing && !user?.must_change_password ? (
           <button
             onClick={() => setIsEditing(true)}
             className="btn btn-primary flex items-center space-x-2"
@@ -194,7 +200,7 @@ const ProfilePage = () => {
             <Edit className="h-4 w-4" />
             <span>Edit Profile</span>
           </button>
-        ) : (
+        ) : isEditing ? (
           <div className="flex items-center space-x-2">
             <button
               onClick={handleCancel}
@@ -212,7 +218,7 @@ const ProfilePage = () => {
               <span>{loading ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -515,26 +521,33 @@ const ProfilePage = () => {
                   <p className="text-xs text-gray-500">Update the password for your account</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPasswordModal(false)
-                  setPasswordData({
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                  })
-                  setShowCurrentPassword(false)
-                  setShowNewPassword(false)
-                  setShowConfirmPassword(false)
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              {!user?.must_change_password && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false)
+                    setPasswordData({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    })
+                    setShowCurrentPassword(false)
+                    setShowNewPassword(false)
+                    setShowConfirmPassword(false)
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
 
             <form onSubmit={handlePasswordSubmit} className="px-6 py-5 space-y-4">
+              {user?.must_change_password && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-sm mb-4">
+                  <strong>Security Required:</strong> You must change your temporary password before you can use the application.
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Current Password
@@ -628,24 +641,26 @@ const ProfilePage = () => {
               </p>
 
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 mt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordModal(false)
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: ''
-                    })
-                    setShowCurrentPassword(false)
-                    setShowNewPassword(false)
-                    setShowConfirmPassword(false)
-                  }}
-                  className="btn btn-secondary"
-                  disabled={passwordLoading}
-                >
-                  Cancel
-                </button>
+                {!user?.must_change_password && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(false)
+                      setPasswordData({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      })
+                      setShowCurrentPassword(false)
+                      setShowNewPassword(false)
+                      setShowConfirmPassword(false)
+                    }}
+                    className="btn btn-secondary"
+                    disabled={passwordLoading}
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="btn btn-primary"

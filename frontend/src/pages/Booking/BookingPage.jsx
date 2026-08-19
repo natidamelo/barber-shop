@@ -14,12 +14,14 @@ import {
   ChevronRight,
   Search,
   Sparkles,
-  CheckCircle
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useActiveServices } from '../../hooks/useServices'
 import { useBarbers } from '../../hooks/useUsers'
 import { appointmentService } from '../../services/appointmentService'
+import { toEthiopianLocalTime } from '../../utils/dateUtils'
 
 const BookingPage = () => {
   const [currentStep, setCurrentStep] = useState(1)
@@ -597,32 +599,89 @@ const BookingPage = () => {
                     <span className="text-sm text-gray-600">Loading available times...</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                    {[...availableSlots].sort().map((time24) => {
-                      const time12 = time24To12(time24)
-                      const isSelected = bookingData.time === time12
-                      return (
-                        <button
-                          key={time24}
-                          type="button"
-                          onClick={() => setBookingData({ ...bookingData, time: time12 })}
-                          className={`p-3 text-sm rounded-md border transition-colors flex items-center justify-center gap-2 ${
-                            isSelected
-                              ? 'bg-primary-600 text-white border-primary-600'
-                              : 'border-gray-200 hover:border-primary-300 hover:bg-primary-50 text-gray-900'
-                          }`}
-                        >
-                          <CheckCircle className="h-4 w-4 shrink-0" />
-                          <span>{time12}</span>
-                        </button>
-                      )
-                    })}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-2">
+                    {(() => {
+                      const allSlots = []
+                      let h = 8 // 8:00 AM (2:00 LT Morning)
+                      let m = 0
+                      while (h < 22) { // 10:00 PM (4:00 LT Night)
+                        allSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+                        m += 15
+                        if (m === 60) {
+                          h += 1
+                          m = 0
+                        }
+                      }
+                      
+                      const isToday = new Date(bookingData.date).toDateString() === new Date().toDateString()
+                      const now = new Date()
+                      const currentH = now.getHours()
+                      const currentM = now.getMinutes()
+                      
+                      const displaySlots = allSlots.filter(time24 => {
+                        if (isToday) {
+                          const [slotH, slotM] = time24.split(':').map(Number)
+                          if (slotH < currentH || (slotH === currentH && slotM <= currentM)) {
+                            return false
+                          }
+                        }
+                        return true
+                      })
+                      
+                      if (displaySlots.length === 0) {
+                        return (
+                          <div className="col-span-full">
+                            <p className="text-amber-700 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
+                              No slots remaining for today. Please choose another date.
+                            </p>
+                          </div>
+                        )
+                      }
+
+                      return displaySlots.map((time24) => {
+                        const time12 = time24To12(time24)
+                        const isSelected = bookingData.time === time12
+                        const isAvailable = availableSlots.includes(time24)
+                        return (
+                          <button
+                            key={time24}
+                            type="button"
+                            disabled={!isAvailable}
+                            onClick={() => isAvailable && setBookingData({ ...bookingData, time: time12 })}
+                            className={`p-3 text-sm rounded-md border transition-all flex flex-col items-center justify-center gap-1 relative overflow-hidden ${
+                              isSelected
+                                ? 'bg-primary-600 text-white border-primary-600 shadow-md transform scale-[1.02]'
+                                : isAvailable
+                                  ? 'border-gray-200 hover:border-primary-400 hover:bg-primary-50 text-gray-900 bg-white hover:shadow-sm'
+                                  : 'border-rose-200 bg-rose-50 text-rose-800 cursor-not-allowed opacity-90'
+                            }`}
+                            title={!isAvailable ? 'This time slot is already booked' : ''}
+                          >
+                            {isAvailable && !isSelected && (
+                              <div className="absolute top-0 right-0 left-0 bg-emerald-500 text-white text-[10px] font-bold py-0.5 text-center tracking-widest uppercase">
+                                Available
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute top-0 right-0 left-0 bg-primary-700 text-white text-[10px] font-bold py-0.5 text-center tracking-widest uppercase">
+                                Selected
+                              </div>
+                            )}
+                            {!isAvailable && (
+                              <div className="absolute top-0 right-0 left-0 bg-rose-500 text-white text-[10px] font-bold py-0.5 text-center tracking-widest uppercase">
+                                Booked
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-3">
+                              {isAvailable ? <CheckCircle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0 text-rose-500" />}
+                              <span className={`font-bold ${!isAvailable ? 'line-through text-rose-500/70' : ''}`}>{toEthiopianLocalTime(time24)}</span>
+                            </div>
+                            <span className={`text-xs ${!isAvailable ? 'text-rose-600/80 font-medium' : 'text-gray-500'} ${isSelected ? 'text-primary-100' : ''}`}>({time12})</span>
+                          </button>
+                        )
+                      })
+                    })()}
                   </div>
-                )}
-                {bookingData.date && !loadingSlots && availableSlots.length === 0 && (
-                  <p className="text-amber-700 text-sm mt-3 bg-amber-50 border border-amber-200 rounded-md p-3">
-                    No available times on this date. Please choose another date.
-                  </p>
                 )}
               </div>
             </div>

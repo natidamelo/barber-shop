@@ -129,7 +129,7 @@ const seedSettings = async () => {
   console.log('✅ Default settings initialized');
 };
 
-const seedServices = async () => {
+const seedServices = async (adminId) => {
   console.log('🌱 Seeding services...');
   
   // Clear existing services
@@ -228,12 +228,13 @@ const seedServices = async () => {
     }
   ];
 
-  const createdServices = await Service.insertMany(services);
-  console.log(`✅ Created ${createdServices.length} services`);
+  const servicesWithAdmin = services.map(s => ({ ...s, admin_id: adminId }));
+  const createdServices = await Service.insertMany(servicesWithAdmin);
+  console.log(`` + `✅ Created ${createdServices.length} services`);
   return createdServices;
 };
 
-const seedInventory = async () => {
+const seedInventory = async (adminId) => {
   console.log('🌱 Seeding inventory...');
   
   // Clear existing inventory
@@ -323,8 +324,9 @@ const seedInventory = async () => {
     }
   ];
 
-  const createdInventory = await Inventory.insertMany(inventory);
-  console.log(`✅ Created ${createdInventory.length} inventory items`);
+  const inventoryWithAdmin = inventory.map(i => ({ ...i, admin_id: adminId }));
+  const createdInventory = await Inventory.insertMany(inventoryWithAdmin);
+  console.log(`` + `✅ Created ${createdInventory.length} inventory items`);
   return createdInventory;
 };
 
@@ -337,9 +339,14 @@ const runSeed = async () => {
     
     // Run seeds
     await seedSettings();
-    await seedUsers();
-    await seedServices();
-    await seedInventory();
+    const users = await seedUsers();
+    
+    // Find admin user
+    const adminUser = users.find(u => u.role === 'superadmin' || u.role === 'admin');
+    const adminId = adminUser ? adminUser._id : null;
+    
+    await seedServices(adminId);
+    await seedInventory(adminId);
     
     console.log('🎉 Database seeding completed successfully!');
     console.log('\n📝 Test Accounts:');

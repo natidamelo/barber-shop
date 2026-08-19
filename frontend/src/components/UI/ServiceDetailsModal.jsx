@@ -124,10 +124,7 @@ const ServiceDetailsModal = ({ service, isOpen, onClose, onEdit }) => {
               Close
             </button>
             <button
-              onClick={() => {
-                onEdit(service)
-                onClose()
-              }}
+              onClick={() => onEdit(service)}
               className="btn btn-primary"
             >
               Edit Service

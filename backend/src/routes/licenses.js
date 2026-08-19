@@ -97,7 +97,9 @@ router.post('/generate', protect, authorize('developer'), [
 
 // ─── Admin: Renew license (extend by 1 year) ─────────────────────────────────
 // PUT /api/licenses/:id/renew
-router.put('/:id/renew', protect, authorize('developer'), async (req, res, next) => {
+router.put('/:id/renew', protect, authorize('developer'), [
+  body('expire_date').optional().isISO8601().withMessage('Valid date is required')
+], async (req, res, next) => {
   try {
     const license = await License.findById(req.params.id);
     if (!license) {
@@ -106,10 +108,14 @@ router.put('/:id/renew', protect, authorize('developer'), async (req, res, next)
 
     const previous_expire_date = license.expire_date;
 
-    // If expired, renew from today; otherwise extend from current expire date
-    const base = license.expire_date < new Date() ? new Date() : new Date(license.expire_date);
-    const new_expire_date = new Date(base);
-    new_expire_date.setFullYear(new_expire_date.getFullYear() + 1);
+    let new_expire_date;
+    if (req.body.expire_date) {
+      new_expire_date = new Date(req.body.expire_date);
+    } else {
+      const base = license.expire_date < new Date() ? new Date() : new Date(license.expire_date);
+      new_expire_date = new Date(base);
+      new_expire_date.setFullYear(new_expire_date.getFullYear() + 1);
+    }
 
     license.expire_date = new_expire_date;
     license.status = license.computer_id ? 'active' : 'pending_activation';
@@ -122,7 +128,7 @@ router.put('/:id/renew', protect, authorize('developer'), async (req, res, next)
 
     await license.save();
 
-    res.json({ success: true, data: license, message: 'License renewed successfully for 1 year' });
+    res.json({ success: true, data: license, message: req.body.expire_date ? 'License expiry date updated successfully' : 'License renewed successfully for 1 year' });
   } catch (error) {
     next(error);
   }

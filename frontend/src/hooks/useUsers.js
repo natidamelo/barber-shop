@@ -26,7 +26,7 @@ export const useWashers = () => {
     ['users', { role: 'washer' }],
     () => userService.getUsers({ role: 'washer', limit: 100 }),
     {
-      staleTime: 1000 * 60 * 5,
+      staleTime: 0,
     }
   )
 }

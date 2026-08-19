@@ -47,7 +47,7 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
       // Partially paid: new total = existing paid + amount paid now (capped at price)
       const finalAmountPaid = isPartiallyPaid
         ? Math.min(totalPrice, existingAmountPaid + (parseFloat(amountToPayNow) || 0))
-        : (parseFloat(amountPaid) || 0)
+        : Math.min(totalPrice, parseFloat(amountPaid) || 0)
       const finalPaymentStatus = calculatePaymentStatus(finalAmountPaid, totalPrice)
 
       await onUpdate({
@@ -134,6 +134,12 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
                 {formatDateInAddisAbaba(appointment.appointment_date, { includeWeekday: true })}
               </span>
             </div>
+            <div className="text-sm">
+              <span className="text-gray-600">Time: </span>
+              <span className="font-medium text-gray-900">
+                {new Date(appointment.appointment_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+              </span>
+            </div>
           </div>
 
           {/* Price (read-only - original price cannot be changed) */}
@@ -186,7 +192,6 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
                   type="number"
                   step="0.01"
                   min="0"
-                  max={remaining}
                   value={amountToPayNow}
                   onChange={(e) => {
                     const val = e.target.value
@@ -203,7 +208,10 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
                     const payNow = parseFloat(amountToPayNow) || 0
                     const newTotalPaid = existingAmountPaid + payNow
                     const status = calculatePaymentStatus(newTotalPaid, price)
-                    if (status === 'paid') return '✓ Will be fully paid'
+                    if (status === 'paid') {
+                      if (payNow > remaining) return `✓ Will be fully paid (Change due: ${(payNow - remaining).toFixed(2)} ETB)`
+                      return '✓ Will be fully paid'
+                    }
                     return `Remaining after this: ${(remaining - payNow).toFixed(2)} ETB`
                   })()}
                 </p>
@@ -217,7 +225,6 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
                   type="number"
                   step="0.01"
                   min="0"
-                  max={price}
                   value={amountPaid}
                   onChange={(e) => {
                     const newAmountPaid = e.target.value
@@ -233,7 +240,10 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
                     const total = parseFloat(price) || 0
                     const rem = Math.max(0, total - paid)
                     const status = calculatePaymentStatus(paid, total)
-                    if (status === 'paid') return '✓ Fully paid'
+                    if (status === 'paid') {
+                      if (paid > total) return `✓ Fully paid (Change due: ${(paid - total).toFixed(2)} ETB)`
+                      return '✓ Fully paid'
+                    }
                     if (status === 'partially_paid') return `Remaining: ${rem.toFixed(2)} ETB`
                     return `Total: ${total.toFixed(2)} ETB`
                   })()}

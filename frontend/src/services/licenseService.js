@@ -60,9 +60,10 @@ export const licenseService = {
     return response.data;
   },
 
-  // Admin: renew license by 1 year
-  renew: async (id) => {
-    const response = await api.put(`/licenses/${id}/renew`);
+  // Admin: renew license by 1 year, or to a specific date
+  renew: async (id, expire_date) => {
+    const payload = expire_date ? { expire_date } : {};
+    const response = await api.put(`/licenses/${id}/renew`, payload);
     return response.data;
   },
 
