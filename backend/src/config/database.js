@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Fix for Node.js 17+ / Render DNS resolution issues with MongoDB Atlas SRV records
+// Fix for Node.js / cloud container DNS resolution issues with MongoDB Atlas SRV records
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (dnsErr) {
+  console.warn('Could not set custom DNS servers:', dnsErr.message);
+}
+
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
@@ -46,7 +52,8 @@ const connectDB = async () => {
     const tryConnect = async (attempt = 1) => {
       try {
         const conn = await mongoose.connect(sanitizedUri, {
-          serverSelectionTimeoutMS: 10000
+          serverSelectionTimeoutMS: 10000,
+          authSource: 'admin'
         });
         console.log('✅ MongoDB connection established successfully');
         console.log(`📊 Connected to: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
