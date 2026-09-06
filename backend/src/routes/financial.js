@@ -45,6 +45,24 @@ router.get('/summary', protect, authorize('admin'), [
       return sum + (apt.price || 0);
     }, 0);
 
+    // Calculate Barber Commission from paid appointments
+    const barberCommission = paidAppointments.reduce((sum, apt) => {
+      let commission = 0;
+      if (apt.barber_commission !== undefined && apt.barber_commission !== null && apt.barber_commission > 0) {
+        commission = apt.barber_commission;
+      } else if (apt.barber_id && apt.service_id && apt.price) {
+        // Fallback calculation if not stored directly on appointment
+        const barber = apt.barber_id;
+        const service = apt.service_id;
+        if (barber && barber.role === 'barber' && barber.commission_percentage) {
+          const shopCut = (service && service.shop_cut) || 0;
+          const remaining = Math.max(0, apt.price - shopCut);
+          commission = Math.round((remaining * barber.commission_percentage / 100) * 100) / 100;
+        }
+      }
+      return sum + commission;
+    }, 0);
+
     // Calculate Cost of Goods Sold (COGS) from inventory usage/waste transactions
     const inventoryTransactions = await InventoryTransaction.find({
       transaction_type: { $in: ['usage', 'waste'] },
@@ -56,8 +74,11 @@ router.get('/summary', protect, authorize('admin'), [
       return sum + (trans.total_cost || 0);
     }, 0);
 
-    // Calculate Gross Profit
-    const grossProfit = totalRevenue - costOfGoodsSold;
+    // Calculate Total Direct Costs (COGS + Barber Commission)
+    const totalDirectCosts = costOfGoodsSold + barberCommission;
+
+    // Calculate Gross Profit (Revenue - Direct Costs)
+    const grossProfit = totalRevenue - totalDirectCosts;
     const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
 
     // Calculate Operating Expenses
@@ -84,11 +105,15 @@ router.get('/summary', protect, authorize('admin'), [
         revenue: {
           total_revenue: Math.round(totalRevenue * 100) / 100,
           cost_of_goods_sold: Math.round(costOfGoodsSold * 100) / 100,
+          barber_commission: Math.round(barberCommission * 100) / 100,
+          total_direct_costs: Math.round(totalDirectCosts * 100) / 100,
           gross_profit: Math.round(grossProfit * 100) / 100,
           gross_margin: Math.round(grossMargin * 100) / 100
         },
         expenses: {
-          operating_expenses: Math.round(totalOperatingExpenses * 100) / 100
+          operating_expenses: Math.round(totalOperatingExpenses * 100) / 100,
+          barber_commission: Math.round(barberCommission * 100) / 100,
+          total_expenses: Math.round((totalOperatingExpenses + barberCommission) * 100) / 100
         },
         profit: {
           net_profit: Math.round(netProfit * 100) / 100,

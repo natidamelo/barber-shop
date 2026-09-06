@@ -1432,12 +1432,14 @@ const ReportsPage = () => {
 
     const totalRevenue = revenue.total_revenue || 0
     const costOfGoodsSold = revenue.cost_of_goods_sold || 0
+    const barberCommission = revenue.barber_commission || 0
     const grossProfit = revenue.gross_profit || 0
     const grossMargin = revenue.gross_margin || 0
     const operatingExpenses = expenses.operating_expenses || 0
     const netProfit = profit.net_profit || 0
     const netMargin = profit.net_margin || 0
     const operatingExpensesList = expensesData.data || []
+    const totalCosts = costOfGoodsSold + barberCommission + operatingExpenses
 
     if (loadingFinancial) {
       return (
@@ -1479,9 +1481,17 @@ const ReportsPage = () => {
               </p>
             </div>
 
+            {/* Barber Commission */}
+            <div className="flex items-center justify-between py-2 px-3 bg-amber-50 rounded">
+              <p className="text-sm font-medium text-gray-600">Barber Commission (Direct Labor):</p>
+              <p className="text-base font-semibold text-amber-700">
+                -{barberCommission.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+              </p>
+            </div>
+
             {/* Cost of Goods Sold */}
             <div className="flex items-center justify-between py-2 px-3 bg-red-50 rounded">
-              <p className="text-sm font-medium text-gray-600">Cost of Goods Sold:</p>
+              <p className="text-sm font-medium text-gray-600">Cost of Goods Sold (Inventory):</p>
               <p className="text-base font-semibold text-red-600">
                 -{costOfGoodsSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
               </p>
@@ -1572,9 +1582,27 @@ const ReportsPage = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Barber Commission</span>
+                  <span className="font-semibold text-amber-700">
+                    {barberCommission.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Cost of Goods Sold</span>
+                  <span className="font-semibold text-red-600">
+                    {costOfGoodsSold.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Operating Expenses</span>
+                  <span className="font-semibold text-orange-600">
+                    {operatingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Costs</span>
                   <span className="font-semibold text-red-600">
-                    {(costOfGoodsSold + operatingExpenses).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                    {totalCosts.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
