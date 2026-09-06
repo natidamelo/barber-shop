@@ -1,10 +1,38 @@
 const express = require('express');
 const { body, validationResult, query } = require('express-validator');
 const moment = require('moment');
-const { OperatingExpense, Appointment, InventoryTransaction } = require('../models');
+const { OperatingExpense, Appointment, InventoryTransaction, User, Service } = require('../models');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Helper function to calculate commission if missing from appointment
+const calculateCommission = async (price, barberId, serviceId) => {
+  try {
+    const barber = await User.findById(barberId).select('commission_percentage role');
+    if (!barber || barber.role !== 'barber') {
+      return { shop_cut: 0, barber_commission: 0 };
+    }
+
+    const service = await Service.findById(serviceId).select('shop_cut');
+    if (!service) {
+      return { shop_cut: 0, barber_commission: 0 };
+    }
+
+    const shopCut = service.shop_cut || 0;
+    const remainingAmount = Math.max(0, price - shopCut);
+    const commissionPercentage = barber.commission_percentage || 0;
+    const barberCommission = Math.round((remainingAmount * commissionPercentage / 100) * 100) / 100;
+
+    return {
+      shop_cut: Math.round(shopCut * 100) / 100,
+      barber_commission: barberCommission
+    };
+  } catch (error) {
+    console.error('Error calculating commission:', error);
+    return { shop_cut: 0, barber_commission: 0 };
+  }
+};
 
 // @desc    Get financial summary report
 // @route   GET /api/financial/summary
@@ -34,34 +62,38 @@ router.get('/summary', protect, authorize('admin'), [
       startDate = moment().subtract(30, 'days').startOf('day').toDate();
     }
 
-    // Calculate Total Revenue from PAID appointments (real collected revenue)
+    // Find all paid/completed appointments in the period
     const paidAppointments = await Appointment.find({
-      payment_status: 'paid',
+      $or: [
+        { payment_status: 'paid' },
+        { status: 'completed' }
+      ],
+      status: { $nin: ['cancelled', 'no_show'] },
+      payment_status: { $ne: 'refunded' },
       appointment_date: { $gte: startDate, $lte: endDate },
       ...(req.shop_id && { admin_id: req.shop_id })
     });
 
-    const totalRevenue = paidAppointments.reduce((sum, apt) => {
-      return sum + (apt.price || 0);
-    }, 0);
+    let totalRevenue = 0;
+    let barberCommission = 0;
 
-    // Calculate Barber Commission from paid appointments
-    const barberCommission = paidAppointments.reduce((sum, apt) => {
-      let commission = 0;
+    for (const apt of paidAppointments) {
+      totalRevenue += (apt.price || 0);
+
       if (apt.barber_commission !== undefined && apt.barber_commission !== null && apt.barber_commission > 0) {
-        commission = apt.barber_commission;
+        barberCommission += apt.barber_commission;
       } else if (apt.barber_id && apt.service_id && apt.price) {
-        // Fallback calculation if not stored directly on appointment
-        const barber = apt.barber_id;
-        const service = apt.service_id;
-        if (barber && barber.role === 'barber' && barber.commission_percentage) {
-          const shopCut = (service && service.shop_cut) || 0;
-          const remaining = Math.max(0, apt.price - shopCut);
-          commission = Math.round((remaining * barber.commission_percentage / 100) * 100) / 100;
-        }
+        const barberId = apt.barber_id._id || apt.barber_id;
+        const serviceId = apt.service_id._id || apt.service_id;
+        const comm = await calculateCommission(apt.price, barberId, serviceId);
+        barberCommission += comm.barber_commission;
+
+        Appointment.findByIdAndUpdate(apt._id, {
+          barber_commission: comm.barber_commission,
+          shop_cut: comm.shop_cut
+        }).catch(err => console.error('Error updating appointment commission:', err));
       }
-      return sum + commission;
-    }, 0);
+    }
 
     // Calculate Cost of Goods Sold (COGS) from inventory usage/waste transactions
     const inventoryTransactions = await InventoryTransaction.find({

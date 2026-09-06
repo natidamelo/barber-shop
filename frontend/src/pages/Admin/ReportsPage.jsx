@@ -1432,14 +1432,29 @@ const ReportsPage = () => {
 
     const totalRevenue = revenue.total_revenue || 0
     const costOfGoodsSold = revenue.cost_of_goods_sold || 0
-    const barberCommission = revenue.barber_commission || 0
-    const grossProfit = revenue.gross_profit || 0
-    const grossMargin = revenue.gross_margin || 0
+
+    // Barber Commission: use backend value if provided and > 0, otherwise compute from period appointments
+    const barberCommissionFromPeriod = periodAppointments
+      .filter(a => a.status === 'completed' || a.payment_status === 'paid')
+      .reduce((sum, apt) => {
+        const comm = apt.barber_commission !== undefined && apt.barber_commission !== null
+          ? apt.barber_commission
+          : 0
+        return sum + comm
+      }, 0)
+
+    const barberCommission = (revenue.barber_commission !== undefined && revenue.barber_commission > 0)
+      ? revenue.barber_commission
+      : barberCommissionFromPeriod
+
+    const totalDirectCosts = costOfGoodsSold + barberCommission
+    const grossProfit = totalRevenue - totalDirectCosts
+    const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
     const operatingExpenses = expenses.operating_expenses || 0
-    const netProfit = profit.net_profit || 0
-    const netMargin = profit.net_margin || 0
+    const netProfit = grossProfit - operatingExpenses
+    const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
     const operatingExpensesList = expensesData.data || []
-    const totalCosts = costOfGoodsSold + barberCommission + operatingExpenses
+    const totalCosts = totalDirectCosts + operatingExpenses
 
     if (loadingFinancial) {
       return (
