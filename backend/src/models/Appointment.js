@@ -72,7 +72,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   payment_method: {
     type: String,
-    enum: ['cash', 'card', 'online', 'other'],
+    enum: ['cash', 'card', 'online', 'telebirr', 'cbe', 'boa', 'mobile_transfer', 'other'],
     default: null
   },
   amount_paid: {

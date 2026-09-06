@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, DollarSign, CreditCard, Wallet, Globe, MoreHorizontal } from 'lucide-react'
+import { X, DollarSign, CreditCard, Wallet, Globe, MoreHorizontal, Smartphone, Building2, Landmark } from 'lucide-react'
 import { formatDateInAddisAbaba } from '../../utils/dateUtils'
 
 const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
@@ -17,7 +17,7 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
   const allServices = appointment.all_services || []
   const hasMultipleServices = allServices.length > 1
 
-  // When already fully paid, bill is read-only and cannot be edited
+  // When already fully paid, amount is read-only but payment method can be adjusted
   const isFullyPaid = appointment.payment_status === 'paid'
   // Partially paid: show already paid + remaining; input is "amount to pay now" only
   const isPartiallyPaid = appointment.payment_status === 'partially_paid'
@@ -40,10 +40,19 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (isFullyPaid) return
     setIsSubmitting(true)
     try {
       const totalPrice = parseFloat(price) || 0
+      if (isFullyPaid) {
+        // When already fully paid, allow updating the payment method
+        await onUpdate({
+          payment_status: 'paid',
+          payment_method: paymentMethod || undefined,
+          price: totalPrice,
+          amount_paid: totalPrice
+        })
+        return
+      }
       // Partially paid: new total = existing paid + amount paid now (capped at price)
       const finalAmountPaid = isPartiallyPaid
         ? Math.min(totalPrice, existingAmountPaid + (parseFloat(amountToPayNow) || 0))
@@ -62,10 +71,13 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
   }
 
   const paymentMethods = [
-    { value: 'cash', label: 'Cash', icon: Wallet },
-    { value: 'card', label: 'Card', icon: CreditCard },
-    { value: 'online', label: 'Online', icon: Globe },
-    { value: 'other', label: 'Other', icon: MoreHorizontal }
+    { value: 'cash', label: 'Cash', icon: Wallet, color: 'text-green-600' },
+    { value: 'telebirr', label: 'Telebirr', icon: Smartphone, color: 'text-amber-600' },
+    { value: 'cbe', label: 'CBE / CBE Birr', icon: Building2, color: 'text-purple-600' },
+    { value: 'boa', label: 'Bank of Abyssinia (BOA)', icon: Landmark, color: 'text-blue-600' },
+    { value: 'card', label: 'Card / POS', icon: CreditCard, color: 'text-indigo-600' },
+    { value: 'online', label: 'Other Bank / Mobile', icon: Globe, color: 'text-teal-600' },
+    { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-gray-600' }
   ]
 
   return (
@@ -274,35 +286,37 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Payment Method
-            </label>
-            {isFullyPaid ? (
-              <div className="input w-full bg-gray-100 cursor-not-allowed flex items-center" title="Fully paid – cannot be edited">
-                <span className="font-medium text-gray-900 capitalize">{paymentMethod || appointment.payment_method || '—'}</span>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {paymentMethods.map((method) => {
-                  const Icon = method.icon
-                  return (
-                    <button
-                      key={method.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(method.value)}
-                      className={`flex items-center space-x-2 p-3 rounded-lg border-2 transition-colors ${
-                        paymentMethod === method.value
-                          ? 'border-primary-500 bg-primary-50 text-primary-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="text-sm font-medium">{method.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Payment Method
+              </label>
+              {paymentMethod && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary-100 text-primary-800 uppercase">
+                  Selected: {paymentMethods.find(m => m.value === paymentMethod)?.label || paymentMethod}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {paymentMethods.map((method) => {
+                const Icon = method.icon
+                const isSelected = paymentMethod === method.value
+                return (
+                  <button
+                    key={method.value}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.value)}
+                    className={`flex items-center space-x-2 p-2.5 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 font-semibold shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 flex-shrink-0 ${method.color || 'text-gray-600'}`} />
+                    <span className="text-xs truncate">{method.label}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Current Status Display */}
@@ -311,7 +325,11 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
               <div>
                 <p className="text-sm font-medium text-blue-900">Current Status</p>
                 <p className="text-xs text-blue-700 mt-1">
-                  {appointment.payment_status?.replace('_', ' ') || 'Pending'} • {appointment.payment_method || 'Not specified'}
+                  {appointment.payment_status?.replace('_', ' ') || 'Pending'} • {
+                    paymentMethods.find(m => m.value === (paymentMethod || appointment.payment_method))?.label ||
+                    appointment.payment_method ||
+                    'Not specified'
+                  }
                   {appointment.payment_status === 'partially_paid' && appointment.amount_paid > 0 && (
                     <span> • Paid: {appointment.amount_paid.toFixed(2)} ETB</span>
                   )}
@@ -360,33 +378,21 @@ const BillManagementModal = ({ appointment, onUpdate, onClose }) => {
 
           {/* Actions */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
-            {isFullyPaid ? (
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn btn-primary"
-              >
-                Close
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="btn btn-secondary"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Updating...' : 'Update Payment'}
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-secondary"
+              disabled={isSubmitting}
+            >
+              {isFullyPaid ? 'Close' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : (isFullyPaid ? 'Update Payment Method' : 'Update Payment')}
+            </button>
           </div>
         </form>
       </div>

@@ -19,7 +19,15 @@ import {
   Droplets,
   MessageSquare,
   Gift,
-  Eye
+  Eye,
+  Wallet,
+  Smartphone,
+  Building2,
+  Landmark,
+  CreditCard,
+  DollarSign,
+  Receipt,
+  Globe
 } from 'lucide-react'
 import { authService } from '../../services/authService'
 import { useAppointments } from '../../hooks/useAppointments'
@@ -32,6 +40,7 @@ import { toEthiopianLocalTime } from '../../utils/dateUtils'
 import LeaveReviewModal from '../../components/UI/LeaveReviewModal'
 import TipBarberModal from '../../components/UI/TipBarberModal'
 import CreateAppointmentModal from '../../components/UI/CreateAppointmentModal'
+import BillManagementModal from '../../components/UI/BillManagementModal'
 import { useUserStats } from '../../hooks/useUsers'
 
 const AppointmentsPage = () => {
@@ -46,6 +55,7 @@ const AppointmentsPage = () => {
   const [tipModalAppointment, setTipModalAppointment] = useState(null)
   const [editModalAppointment, setEditModalAppointment] = useState(null)
   const [viewModalAppointment, setViewModalAppointment] = useState(null)
+  const [billModalAppointment, setBillModalAppointment] = useState(null)
   const [openMoreId, setOpenMoreId] = useState(null)
   const [cancellingId, setCancellingId] = useState(null)
   const moreMenuRef = useRef(null)
@@ -170,6 +180,106 @@ const AppointmentsPage = () => {
     if (!customerId) return null
     return customers.find(c => (c._id || c.id) === customerId)
   }
+
+  const handleBillUpdated = async (paymentData) => {
+    try {
+      await appointmentService.updateAppointment(billModalAppointment._id || billModalAppointment.id, paymentData)
+      toast.success('Payment updated successfully!')
+      setBillModalAppointment(null)
+      queryClient.invalidateQueries(['appointments'])
+      refetch()
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update payment')
+    }
+  }
+
+  // Calculate daily business and payment summary for selected date / today
+  const calculateDaySummary = (aptsList) => {
+    const summary = {
+      totalAppointments: aptsList.length,
+      completed: 0,
+      walkIns: 0,
+      booked: 0,
+      totalCustomers: 0,
+      totalCollected: 0,
+      totalPending: 0,
+      paidCount: 0,
+      partiallyPaidCount: 0,
+      pendingCount: 0,
+      totalTransactions: 0,
+      methods: {
+        cash: { amount: 0, count: 0 },
+        telebirr: { amount: 0, count: 0 },
+        cbe: { amount: 0, count: 0 },
+        boa: { amount: 0, count: 0 },
+        card: { amount: 0, count: 0 },
+        online: { amount: 0, count: 0 },
+        other: { amount: 0, count: 0 }
+      }
+    }
+
+    const customerIds = new Set()
+
+    aptsList.forEach(apt => {
+      const cId = apt.customer_id?._id || apt.customer_id || apt._id
+      if (cId) customerIds.add(String(cId))
+
+      if (apt.is_walk_in) summary.walkIns += 1
+      else summary.booked += 1
+
+      if (apt.status === 'completed') summary.completed += 1
+
+      const price = parseFloat(apt.total_price || apt.price) || 0
+      const amountPaid = parseFloat(apt.amount_paid) || 0
+
+      // Calculate collected vs pending
+      if (apt.payment_status === 'paid') {
+        const collected = amountPaid > 0 ? amountPaid : price
+        summary.totalCollected += collected
+        summary.paidCount += 1
+        summary.totalTransactions += 1
+
+        const method = (apt.payment_method || 'cash').toLowerCase()
+        if (summary.methods[method]) {
+          summary.methods[method].amount += collected
+          summary.methods[method].count += 1
+        } else if (method === 'mobile_transfer') {
+          summary.methods.online.amount += collected
+          summary.methods.online.count += 1
+        } else {
+          summary.methods.other.amount += collected
+          summary.methods.other.count += 1
+        }
+      } else if (apt.payment_status === 'partially_paid') {
+        summary.totalCollected += amountPaid
+        summary.totalPending += Math.max(0, price - amountPaid)
+        summary.partiallyPaidCount += 1
+        if (amountPaid > 0) {
+          summary.totalTransactions += 1
+          const method = (apt.payment_method || 'cash').toLowerCase()
+          if (summary.methods[method]) {
+            summary.methods[method].amount += amountPaid
+            summary.methods[method].count += 1
+          } else if (method === 'mobile_transfer') {
+            summary.methods.online.amount += amountPaid
+            summary.methods.online.count += 1
+          } else {
+            summary.methods.other.amount += amountPaid
+            summary.methods.other.count += 1
+          }
+        }
+      } else {
+        // Pending
+        summary.totalPending += price
+        summary.pendingCount += 1
+      }
+    })
+
+    summary.totalCustomers = customerIds.size || summary.totalAppointments
+    return summary
+  }
+
+  const daySummary = calculateDaySummary(appointments)
 
   // Handle date change
   const handleDateChange = (date) => {
@@ -474,6 +584,175 @@ const AppointmentsPage = () => {
         </div>
       </div>
 
+      {/* Daily Business & Payment Breakdown (Admin & Receptionist when viewing a specific date or today) */}
+      {(user?.role === 'admin' || user?.role === 'receptionist') && selectedDate && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-700 via-primary-800 to-indigo-900 p-5 text-white">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Receipt className="h-5 w-5 text-primary-200" />
+                  <h3 className="text-lg font-bold">Daily Closing & Payment Summary</h3>
+                  <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-medium">
+                    {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="text-xs text-primary-100 mt-1">
+                  Overview of customers, visits, and cash/transfer collections (Telebirr, CBE, BOA, Cash, Card)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/15 text-right">
+                  <p className="text-[11px] uppercase tracking-wider text-primary-200 font-semibold">Total Collected</p>
+                  <p className="text-2xl font-extrabold text-white">
+                    {daySummary.totalCollected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-5">
+            {/* Top Stat Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-blue-50/70 border border-blue-100 rounded-lg p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-blue-700 uppercase">Customers</span>
+                  <User className="h-4 w-4 text-blue-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{daySummary.totalCustomers}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {daySummary.walkIns} Walk-in • {daySummary.booked} Booked
+                </p>
+              </div>
+
+              <div className="bg-green-50/70 border border-green-100 rounded-lg p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-green-700 uppercase">Completed</span>
+                  <Check className="h-4 w-4 text-green-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{daySummary.completed}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  of {daySummary.totalAppointments} total appointments
+                </p>
+              </div>
+
+              <div className="bg-emerald-50/70 border border-emerald-100 rounded-lg p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-700 uppercase">Paid Settled</span>
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{daySummary.paidCount}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {daySummary.partiallyPaidCount > 0 ? `${daySummary.partiallyPaidCount} partially paid` : 'All settled'}
+                </p>
+              </div>
+
+              <div className="bg-amber-50/70 border border-amber-100 rounded-lg p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-amber-700 uppercase">Pending / Unpaid</span>
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {daySummary.totalPending.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {daySummary.pendingCount} appointment{daySummary.pendingCount === 1 ? '' : 's'} pending
+                </p>
+              </div>
+            </div>
+
+            {/* Payment Methods Breakdown Grid */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  Payment Channels Breakdown
+                </h4>
+                <span className="text-xs text-gray-500">
+                  {daySummary.totalCollected > 0 ? `${daySummary.totalTransactions} payment transactions recorded` : 'No payments collected yet today'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {/* Cash */}
+                <div className="bg-gray-50 hover:bg-green-50/60 border border-gray-200 hover:border-green-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-green-700 mb-1">
+                    <Wallet className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">Cash</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {daySummary.methods.cash.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{daySummary.methods.cash.count} payment{daySummary.methods.cash.count === 1 ? '' : 's'}</p>
+                </div>
+
+                {/* Telebirr */}
+                <div className="bg-gray-50 hover:bg-amber-50/60 border border-gray-200 hover:border-amber-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-amber-700 mb-1">
+                    <Smartphone className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">Telebirr</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {daySummary.methods.telebirr.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{daySummary.methods.telebirr.count} payment{daySummary.methods.telebirr.count === 1 ? '' : 's'}</p>
+                </div>
+
+                {/* CBE */}
+                <div className="bg-gray-50 hover:bg-purple-50/60 border border-gray-200 hover:border-purple-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-purple-700 mb-1">
+                    <Building2 className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">CBE / CBE Birr</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {daySummary.methods.cbe.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{daySummary.methods.cbe.count} payment{daySummary.methods.cbe.count === 1 ? '' : 's'}</p>
+                </div>
+
+                {/* BOA */}
+                <div className="bg-gray-50 hover:bg-blue-50/60 border border-gray-200 hover:border-blue-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-blue-700 mb-1">
+                    <Landmark className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">BOA</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {daySummary.methods.boa.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{daySummary.methods.boa.count} payment{daySummary.methods.boa.count === 1 ? '' : 's'}</p>
+                </div>
+
+                {/* Card */}
+                <div className="bg-gray-50 hover:bg-indigo-50/60 border border-gray-200 hover:border-indigo-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-indigo-700 mb-1">
+                    <CreditCard className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">Card / POS</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {daySummary.methods.card.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{daySummary.methods.card.count} payment{daySummary.methods.card.count === 1 ? '' : 's'}</p>
+                </div>
+
+                {/* Other Mobile / Online */}
+                <div className="bg-gray-50 hover:bg-teal-50/60 border border-gray-200 hover:border-teal-300 rounded-lg p-3 transition-colors">
+                  <div className="flex items-center space-x-1.5 text-teal-700 mb-1">
+                    <Globe className="h-4 w-4" />
+                    <span className="text-xs font-bold uppercase">Other Transfer</span>
+                  </div>
+                  <p className="text-base font-bold text-gray-900">
+                    {(daySummary.methods.online.amount + daySummary.methods.other.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {(daySummary.methods.online.count + daySummary.methods.other.count)} payment{(daySummary.methods.online.count + daySummary.methods.other.count) === 1 ? '' : 's'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters and Search */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center space-x-2 overflow-x-auto">
@@ -638,7 +917,29 @@ const AppointmentsPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap border-y border-gray-100 group-hover:border-primary-100">
                         <div className="text-sm font-bold text-gray-900">
-                          {(appointment.price || 0).toFixed(2)} ETB
+                          {(appointment.total_price || appointment.price || 0).toFixed(2)} ETB
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {appointment.payment_status === 'paid' ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800">
+                              Paid • {
+                                appointment.payment_method === 'telebirr' ? 'Telebirr' :
+                                appointment.payment_method === 'cbe' ? 'CBE' :
+                                appointment.payment_method === 'boa' ? 'BOA' :
+                                appointment.payment_method === 'card' ? 'Card' :
+                                appointment.payment_method === 'cash' ? 'Cash' :
+                                (appointment.payment_method || 'Cash')
+                              }
+                            </span>
+                          ) : appointment.payment_status === 'partially_paid' ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-orange-100 text-orange-800">
+                              Partial ({(appointment.amount_paid || 0).toFixed(0)} ETB)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600">
+                              Pending
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium border-y border-r border-gray-100 group-hover:border-primary-100 first:rounded-l-xl last:rounded-r-xl pr-8">
@@ -712,7 +1013,7 @@ const AppointmentsPage = () => {
                                 <MoreHorizontal className="h-4 w-4" />
                               </button>
                               {openMoreId === (appointment._id || appointment.id) && (
-                                <div className="absolute right-0 top-full mt-1 w-48 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                <div className="absolute right-0 top-full mt-1 w-52 py-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -724,6 +1025,19 @@ const AppointmentsPage = () => {
                                     <Eye className="h-4 w-4" />
                                     <span>View details</span>
                                   </button>
+                                  {(user?.role === 'admin' || user?.role === 'receptionist') && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setBillModalAppointment(appointment)
+                                        setOpenMoreId(null)
+                                      }}
+                                      className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 text-left font-medium"
+                                    >
+                                      <DollarSign className="h-4 w-4 text-emerald-600" />
+                                      <span>Manage Bill / Payment</span>
+                                    </button>
+                                  )}
                                   {canEditAppointment(appointment) && (
                                     <button
                                       type="button"
@@ -904,6 +1218,14 @@ const AppointmentsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {billModalAppointment && (
+        <BillManagementModal
+          appointment={billModalAppointment}
+          onClose={() => setBillModalAppointment(null)}
+          onUpdate={handleBillUpdated}
+        />
       )}
     </div>
   )

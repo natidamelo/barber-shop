@@ -11,7 +11,10 @@ import {
   MoreHorizontal,
   CheckCircle,
   Clock,
-  Filter
+  Filter,
+  Smartphone,
+  Building2,
+  Landmark
 } from 'lucide-react'
 import { useAppointments } from '../../hooks/useAppointments'
 import { appointmentService } from '../../services/appointmentService'
@@ -127,11 +130,29 @@ const BillingPage = () => {
   const getPaymentMethodIcon = (method) => {
     const icons = {
       cash: Wallet,
+      telebirr: Smartphone,
+      cbe: Building2,
+      boa: Landmark,
       card: CreditCard,
       online: Globe,
+      mobile_transfer: Globe,
       other: MoreHorizontal
     }
     return icons[method] || DollarSign
+  }
+
+  const getPaymentMethodLabel = (method) => {
+    const labels = {
+      cash: 'Cash',
+      telebirr: 'Telebirr',
+      cbe: 'CBE Birr / CBE',
+      boa: 'BOA',
+      card: 'Card / POS',
+      online: 'Online / Transfer',
+      mobile_transfer: 'Mobile Transfer',
+      other: 'Other'
+    }
+    return labels[method] || method
   }
 
   const getStatusColor = (status) => {
@@ -420,8 +441,8 @@ const BillingPage = () => {
                           {appointment.payment_method ? (
                             <div className="flex items-center space-x-1">
                               <PaymentMethodIcon className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-900 capitalize">
-                                {appointment.payment_method}
+                              <span className="text-sm text-gray-900 font-medium">
+                                {getPaymentMethodLabel(appointment.payment_method)}
                               </span>
                             </div>
                           ) : (

@@ -866,7 +866,7 @@ router.put('/:id', protect, [
     .withMessage('Invalid payment status'),
   body('payment_method')
     .optional()
-    .isIn(['cash', 'card', 'online', 'other'])
+    .isIn(['cash', 'card', 'online', 'telebirr', 'cbe', 'boa', 'mobile_transfer', 'other'])
     .withMessage('Invalid payment method'),
   body('price')
     .optional()
